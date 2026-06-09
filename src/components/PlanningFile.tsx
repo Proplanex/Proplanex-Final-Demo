@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAppState } from "../context/AppContext";
 import { Order, MachinePlan } from "../types";
-import { Search, Plus, Calendar, Settings, Printer, Scissors, HelpCircle, ChevronRight, CheckCircle } from "lucide-react";
+import { Search, Plus, Calendar, Settings, Printer, Scissors, HelpCircle, ChevronRight, CheckCircle, ExternalLink } from "lucide-react";
 
 export default function PlanningFile() {
   const { 
@@ -20,6 +20,7 @@ export default function PlanningFile() {
   // Printable Job Card selection
   const [activeJobCard, setActiveJobCard] = useState<MachinePlan | null>(null);
   const [activeJobCardOrder, setActiveJobCardOrder] = useState<Order | null>(null);
+  const [printError, setPrintError] = useState<string | null>(null);
 
   // Filters search by Order Number ONLY (pulls from Order Status)
   const filteredOrders = orders.filter(o => {
@@ -85,12 +86,20 @@ export default function PlanningFile() {
   };
 
   const handleViewJobCard = (plan: MachinePlan, order: Order) => {
+    setPrintError(null);
     setActiveJobCard(plan);
     setActiveJobCardOrder(order);
   };
 
   const triggerPrintJobCard = () => {
-    window.print();
+    try {
+      setPrintError(null);
+      window.focus();
+      window.print();
+    } catch (err) {
+      console.warn("Direct window.print() failed: ", err);
+      setPrintError("Browser iframe print block detected. Please open the app in a standalone tab.");
+    }
   };
 
   return (
@@ -385,6 +394,27 @@ export default function PlanningFile() {
                 </button>
               </div>
             </div>
+
+            {/* IFRAME PRINT NOTIFICATION (no-print) */}
+            {(window.self !== window.top || printError) && (
+              <div className="no-print p-4 bg-amber-50/90 border border-amber-200 rounded-xl flex items-start gap-3 text-xs text-amber-800 shadow-sm leading-relaxed">
+                <span className="text-lg select-none mt-0.5">⚠️</span>
+                <div className="space-y-1">
+                  <p className="font-semibold text-amber-900">Browser Security Restricts Printing inside Editor Sandbox</p>
+                  <p className="text-amber-700 text-[11px]">
+                    Your web browser blocks print commands nested inside secure development iframes. To print or save files as PDF perfectly, please click <strong>"Open in New Tab" / "Open"</strong> at the top-right corner of the web simulator in AI Studio, or launch via the link below:
+                  </p>
+                  <a 
+                    href={window.location.href} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="inline-flex items-center gap-1 font-mono text-[10px] font-bold bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-2 uppercase tracking-wider cursor-pointer"
+                  >
+                    Open Standalone & Print <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              </div>
+            )}
 
             {/* THE ACTUAL PRINT CARD FORMAT (TARGET OF A4 TICKET) */}
             <div id="jobcard_print_target" className="space-y-6 text-slate-900 font-sans p-2 border border-slate-100 rounded-xl print:border-none print:p-0">

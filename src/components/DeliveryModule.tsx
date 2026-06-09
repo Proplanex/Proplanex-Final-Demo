@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAppState } from "../context/AppContext";
 import { Order, DeliveryChallan, GreyDeliveryItem, YarnReturnItem } from "../types";
-import { Plus, Search, FileText, Printer, FileDown, Trash2, HelpCircle } from "lucide-react";
+import { Plus, Search, FileText, Printer, FileDown, Trash2, HelpCircle, ExternalLink } from "lucide-react";
 import { downloadTableAsExcel } from "../utils/helpers";
 
 export default function DeliveryModule() {
@@ -37,6 +37,18 @@ export default function DeliveryModule() {
 
   // Handle active Challan selection for Printing
   const [activePrintChallan, setActivePrintChallan] = useState<DeliveryChallan | null>(null);
+  const [printError, setPrintError] = useState<string | null>(null);
+
+  const triggerPrintChallan = () => {
+    try {
+      setPrintError(null);
+      window.focus();
+      window.print();
+    } catch (err) {
+      console.warn("Direct window.print() failed: ", err);
+      setPrintError("Browser iframe print block detected. Please open the app in a standalone tab.");
+    }
+  };
 
   // Set default factory
   useEffect(() => {
@@ -481,6 +493,7 @@ export default function DeliveryModule() {
                           onClick={() => {
                             const fullChallan = deliveryChallans.find(c => c.challanNo === row.challanNo);
                             if (fullChallan) {
+                              setPrintError(null);
                               setActivePrintChallan(fullChallan);
                             }
                           }}
@@ -897,7 +910,7 @@ export default function DeliveryModule() {
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => window.print()}
+                  onClick={triggerPrintChallan}
                   className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
                 >
                   <Printer className="h-4 w-4" /> Print Challan
@@ -910,6 +923,27 @@ export default function DeliveryModule() {
                 </button>
               </div>
             </div>
+
+            {/* IFRAME PRINT NOTIFICATION (no-print) */}
+            {(window.self !== window.top || printError) && (
+              <div className="no-print p-4 bg-amber-50/90 border border-amber-200 rounded-xl flex items-start gap-3 text-xs text-amber-805 shadow-sm leading-relaxed">
+                <span className="text-lg select-none mt-0.5">⚠️</span>
+                <div className="space-y-1">
+                  <p className="font-semibold text-amber-900">Browser Security Restricts Printing inside Editor Sandbox</p>
+                  <p className="text-amber-700 text-[11px]">
+                    Your web browser blocks print commands nested inside secure development iframes. To print or save files as PDF perfectly, please click <strong>"Open in New Tab" / "Open"</strong> at the top-right corner of the web simulator in AI Studio, or launch via the link below:
+                  </p>
+                  <a 
+                    href={window.location.href} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="inline-flex items-center gap-1 font-mono text-[10px] font-bold bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-2 uppercase tracking-wider cursor-pointer"
+                  >
+                    Open Standalone & Print <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              </div>
+            )}
 
             {/* A4 TARGET LAYOUT FOR CHALLANS */}
             <div className="space-y-6 text-slate-900 font-sans p-2 border border-slate-150 rounded-xl print:border-none print:p-0">

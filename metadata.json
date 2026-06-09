@@ -1,5 +1,5 @@
 {
-  "name": "Proplanex",
+  "name": "Proplaex Hub",
   "description": "Knit fabric production and planning management system.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

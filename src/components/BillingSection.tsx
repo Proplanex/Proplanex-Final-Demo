@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAppState } from "../context/AppContext";
 import { BillRecord, BillItem, DeliveryChallan, Order } from "../types";
-import { Plus, Search, FileDown, Printer, DollarSign, Receipt, BarChart3, HelpCircle } from "lucide-react";
+import { Plus, Search, FileDown, Printer, DollarSign, Receipt, BarChart3, HelpCircle, ExternalLink } from "lucide-react";
 import { downloadTableAsExcel, numberToWords } from "../utils/helpers";
 
 export default function BillingSection() {
@@ -17,6 +17,18 @@ export default function BillingSection() {
 
   // Print view state
   const [activePrintBill, setActivePrintBill] = useState<BillRecord | null>(null);
+  const [printError, setPrintError] = useState<string | null>(null);
+
+  const triggerPrintBill = () => {
+    try {
+      setPrintError(null);
+      window.focus();
+      window.print();
+    } catch (err) {
+      console.warn("Direct window.print() failed: ", err);
+      setPrintError("Browser iframe print block detected. Please open the app in a standalone tab.");
+    }
+  };
 
   // Set default factory
   useEffect(() => {
@@ -319,7 +331,10 @@ export default function BillingSection() {
                       <td className="py-3.5 px-4 text-right font-bold text-indigo-700 text-sm">৳ {bill.totalAmount.toLocaleString()}</td>
                       <td className="py-2.5 px-3 text-center">
                         <button
-                          onClick={() => setActivePrintBill(bill)}
+                          onClick={() => {
+                            setPrintError(null);
+                            setActivePrintBill(bill);
+                          }}
                           className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-3 py-1 rounded font-bold text-[11px] hover:bg-indigo-100 cursor-pointer inline-flex items-center gap-1"
                         >
                           <Printer className="h-3 w-3" /> Invoice
@@ -539,7 +554,7 @@ export default function BillingSection() {
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => window.print()}
+                  onClick={triggerPrintBill}
                   className="bg-indigo-650 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
                 >
                   <Printer className="h-4 w-4" /> Print Bill
@@ -552,6 +567,27 @@ export default function BillingSection() {
                 </button>
               </div>
             </div>
+
+            {/* IFRAME PRINT NOTIFICATION (no-print) */}
+            {(window.self !== window.top || printError) && (
+              <div className="no-print p-4 bg-amber-50/90 border border-amber-200 rounded-xl flex items-start gap-3 text-xs text-amber-805 shadow-sm leading-relaxed">
+                <span className="text-lg select-none mt-0.5">⚠️</span>
+                <div className="space-y-1">
+                  <p className="font-semibold text-amber-900">Browser Security Restricts Printing inside Editor Sandbox</p>
+                  <p className="text-amber-700 text-[11px]">
+                    Your web browser blocks print commands nested inside secure development iframes. To print or save files as PDF perfectly, please click <strong>"Open in New Tab" / "Open"</strong> at the top-right corner of the web simulator in AI Studio, or launch via the link below:
+                  </p>
+                  <a 
+                    href={window.location.href} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="inline-flex items-center gap-1 font-mono text-[10px] font-bold bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-2 uppercase tracking-wider cursor-pointer"
+                  >
+                    Open Standalone & Print <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              </div>
+            )}
 
             {/* A4 TARGET LAYOUT FOR COMMERCIAL BILLS */}
             <div className="space-y-6 text-slate-900 font-sans p-2 border border-slate-150 rounded-xl print:border-none print:p-0">
