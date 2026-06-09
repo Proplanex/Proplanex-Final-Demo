@@ -293,23 +293,25 @@ export default function OrderStatus() {
                               {/* Left Columns - Yarn Specifications */}
                               <div className="col-span-1 md:col-span-2 lg:col-span-3">
                                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 font-mono">Yarn Setup Specifications</p>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                  {order.yarns.map((yarn, idx) => (
-                                    <div key={idx} className="bg-white p-3 rounded-xl border border-slate-100 shadow-3xs">
-                                      <p className="text-[10px] font-mono text-sky-600 font-semibold mb-1">Yarn Segment {idx + 1}</p>
-                                      {yarn.yc ? (
+                                {order.yarns.some(yarn => yarn.yc) ? (
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    {order.yarns.filter(yarn => yarn.yc).map((yarn, idx) => (
+                                      <div key={idx} className="bg-white p-3 rounded-xl border border-slate-100 shadow-3xs">
+                                        <p className="text-[10px] font-mono text-sky-600 font-semibold mb-1">Yarn Segment {idx + 1}</p>
                                         <div className="space-y-1 text-xs">
                                           <p className="font-semibold text-slate-800">{yarn.yc}</p>
                                           <p className="text-slate-500"><span className="text-slate-400 font-mono">Lot:</span> {yarn.lot}</p>
                                           <p className="text-slate-500"><span className="text-slate-400 font-mono">Spn:</span> {yarn.spinner}</p>
                                           <p className="text-slate-500"><span className="text-slate-400 font-mono">S/L:</span> {yarn.sl}</p>
                                         </div>
-                                      ) : (
-                                        <p className="text-xs text-slate-300 italic py-2">Not configured</p>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-3xs text-center">
+                                    <p className="text-xs text-slate-400 italic py-2">No active yarn specifications mapped to this order fabric.</p>
+                                  </div>
+                                )}
                               </div>
                               
                               {/* Right column - Remarks and extra details */}

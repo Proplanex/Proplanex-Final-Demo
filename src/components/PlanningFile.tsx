@@ -204,18 +204,20 @@ export default function PlanningFile() {
                           <td colSpan={9} className="py-4 px-10 border-b border-slate-100">
                             <div className="space-y-4">
                               {/* Yarn detail cards */}
-                              <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-3xs">
-                                <p className="text-xs font-semibold text-slate-400 font-mono uppercase mb-2">Primary Yarn Configurations</p>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                  {order.yarns.map((y, idx) => y.yc ? (
-                                    <div key={idx} className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs">
-                                      <span className="text-[10px] text-sky-600 font-bold font-mono uppercase block mb-1">Yarn {idx+1}</span>
-                                      <p className="font-semibold text-slate-800">{y.yc}</p>
-                                      <p className="text-slate-500 opacity-80 mt-0.5">Lot: {y.lot} | Spn: {y.spinner} | SL: {y.sl}</p>
-                                    </div>
-                                  ) : null)}
+                              {order.yarns.some(y => y.yc) && (
+                                <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-3xs">
+                                  <p className="text-xs font-semibold text-slate-400 font-mono uppercase mb-2">Primary Yarn Configurations</p>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    {order.yarns.map((y, idx) => y.yc ? (
+                                      <div key={idx} className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs">
+                                        <span className="text-[10px] text-sky-600 font-bold font-mono uppercase block mb-1">Yarn {idx+1}</span>
+                                        <p className="font-semibold text-slate-800">{y.yc}</p>
+                                        <p className="text-slate-500 opacity-80 mt-0.5">Lot: {y.lot} | Spn: {y.spinner} | SL: {y.sl}</p>
+                                      </div>
+                                    ) : null)}
+                                  </div>
                                 </div>
-                              </div>
+                              )}
 
                               {/* Machine Routing Table */}
                               <div>
