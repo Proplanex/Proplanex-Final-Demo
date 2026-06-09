@@ -112,6 +112,12 @@ export interface MachineConfig {
   machineNo: string;
   dia: number;
   gg: number;
+  machineType?: string;
+  fabricType?: string;
+  brand?: string;
+  origin?: string;
+  rpm?: number;
+  feeder?: number;
 }
 
 export interface RunningFactory {

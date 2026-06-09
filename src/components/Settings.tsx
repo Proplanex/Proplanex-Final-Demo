@@ -16,10 +16,22 @@ export default function SettingsSection() {
   const [profilePhoneEmail, setProfilePhoneEmail] = useState(companyProfile.phoneEmail);
   const [profileMsg, setProfileMsg] = useState("");
 
-  // Machine form parameters
-  const [newMachNo, setNewMachNo] = useState("");
-  const [newMachDia, setNewMachDia] = useState("");
-  const [newMachGG, setNewMachGG] = useState("");
+  // Machine filter parameters
+  const [filterNo, setFilterNo] = useState("");
+  const [filterDia, setFilterDia] = useState("");
+  const [filterGG, setFilterGG] = useState("");
+
+  // Machine form modal states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalMachNo, setModalMachNo] = useState("");
+  const [modalMachineType, setModalMachineType] = useState("Single Jersey");
+  const [modalFabricType, setModalFabricType] = useState("SJ");
+  const [modalBrand, setModalBrand] = useState("");
+  const [modalOrigin, setModalOrigin] = useState("");
+  const [modalRPM, setModalRPM] = useState("");
+  const [modalDia, setModalDia] = useState("");
+  const [modalGG, setModalGG] = useState("");
+  const [modalFeeder, setModalFeeder] = useState("");
 
   // Factory form parameters
   const [newFactName, setNewFactName] = useState("");
@@ -41,20 +53,24 @@ export default function SettingsSection() {
     setTimeout(() => setProfileMsg(""), 3000);
   };
 
-  const handleAddMachine = (e: React.FormEvent) => {
+  const handleModalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMachNo.trim() || !newMachDia || !newMachGG) {
-      alert("Please fill in all machine details (Name/Number, Dia, Gauge)");
+    if (!modalMachNo.trim() || !modalDia || !modalGG) {
+      alert("Please fill in required machine details (Name, Dia, Gauge)");
       return;
     }
     addMachine({
-      machineNo: newMachNo,
-      dia: Number(newMachDia),
-      gg: Number(newMachGG)
+      machineNo: modalMachNo.trim(),
+      dia: Number(modalDia),
+      gg: Number(modalGG),
+      machineType: modalMachineType,
+      fabricType: modalFabricType,
+      brand: modalBrand.trim() || undefined,
+      origin: modalOrigin.trim() || undefined,
+      rpm: modalRPM ? Number(modalRPM) : undefined,
+      feeder: modalFeeder ? Number(modalFeeder) : undefined
     });
-    setNewMachNo("");
-    setNewMachDia("");
-    setNewMachGG("");
+    setShowAddModal(false);
   };
 
   const handleAddFactory = (e: React.FormEvent) => {
@@ -158,42 +174,49 @@ export default function SettingsSection() {
             <p className="text-xs text-slate-400 mt-1">Configure diameter and feed gauge configs for knitting machine arrays on the floor.</p>
           </div>
 
-          <form onSubmit={handleAddMachine} className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs items-end bg-slate-50 p-3 rounded-xl border border-slate-150">
+          <form onSubmit={(e) => e.preventDefault()} className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs items-end bg-slate-50 p-3 rounded-xl border border-slate-150">
             <div>
-              <label className="block text-slate-500 mb-1">M/C No / ID</label>
+              <label className="block text-slate-500 mb-1">Filter M/C No / ID</label>
               <input
                 type="text"
-                required
                 className="w-full p-2 bg-white border border-slate-200 rounded-lg"
-                placeholder="e.g. M-111"
-                value={newMachNo}
-                onChange={(e) => setNewMachNo(e.target.value)}
+                placeholder="Search No..."
+                value={filterNo}
+                onChange={(e) => setFilterNo(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-slate-500 mb-1">Diameter (Dia Inches)</label>
+              <label className="block text-slate-500 mb-1">Filter Dia (Inches)</label>
               <input
-                type="number"
-                required
+                type="text"
                 className="w-full p-2 bg-white border border-slate-200 rounded-lg"
-                placeholder="e.g. 44"
-                value={newMachDia}
-                onChange={(e) => setNewMachDia(e.target.value)}
+                placeholder="Search Dia..."
+                value={filterDia}
+                onChange={(e) => setFilterDia(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-slate-500 mb-1">Gauge (GG Ratio)</label>
+              <label className="block text-slate-500 mb-1">Filter Gauge (GG)</label>
               <input
-                type="number"
-                required
+                type="text"
                 className="w-full p-2 bg-white border border-slate-200 rounded-lg"
-                placeholder="e.g. 18"
-                value={newMachGG}
-                onChange={(e) => setNewMachGG(e.target.value)}
+                placeholder="Search GG..."
+                value={filterGG}
+                onChange={(e) => setFilterGG(e.target.value)}
               />
             </div>
             <button
-              type="submit"
+              type="button"
+              onClick={() => {
+                setModalMachNo("");
+                setModalBrand("");
+                setModalOrigin("");
+                setModalRPM("");
+                setModalDia("");
+                setModalGG("");
+                setModalFeeder("");
+                setShowAddModal(true);
+              }}
               className="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-3 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors"
             >
               <Plus className="h-4 w-4" /> Add M/C
@@ -201,21 +224,57 @@ export default function SettingsSection() {
           </form>
 
           {/* Machine List Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 max-h-[170px] overflow-y-auto pr-1">
-            {machines.map((mach, idx) => (
-              <div key={idx} className="p-2.5 bg-white border border-slate-150 rounded-xl flex items-center justify-between hover:border-slate-300 transition-colors shadow-3xs">
-                <div>
-                  <span className="font-mono font-bold text-slate-805 text-xs leading-none">{mach.machineNo}</span>
-                  <span className="text-[10px] text-slate-400 block font-mono mt-0.5">{mach.dia} Dia x {mach.gg} GG</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 max-h-[220px] overflow-y-auto pr-1">
+            {(() => {
+              const filtered = machines.filter(m => {
+                const matchNo = m.machineNo.toLowerCase().includes(filterNo.toLowerCase());
+                const matchDia = filterDia === "" || String(m.dia).includes(filterDia);
+                const matchGG = filterGG === "" || String(m.gg).includes(filterGG);
+                return matchNo && matchDia && matchGG;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="col-span-full text-center py-6 text-slate-400 italic">
+                    No matching knitting machines found on floor.
+                  </div>
+                );
+              }
+
+              return filtered.map((mach, idx) => (
+                <div key={idx} className="p-2.5 bg-white border border-slate-150 rounded-xl flex items-center justify-between hover:border-slate-300 transition-colors shadow-3xs">
+                  <div className="space-y-0.5 max-w-[80%]">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <span className="font-mono font-bold text-slate-800 text-xs leading-none">{mach.machineNo}</span>
+                      {mach.brand && (
+                        <span className="text-[9px] font-semibold bg-slate-100 text-slate-600 px-1 rounded truncate max-w-[65px]" title={mach.brand}>
+                          {mach.brand}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono block">
+                      {mach.dia} Dia x {mach.gg} GG
+                    </span>
+                    {(mach.machineType || mach.fabricType) && (
+                      <span className="text-[9px] text-sky-600 font-medium block truncate max-w-full">
+                        {mach.machineType ? `${mach.machineType}` : ""} {mach.fabricType ? `(${mach.fabricType})` : ""}
+                      </span>
+                    )}
+                    {(mach.origin || mach.rpm || mach.feeder) && (
+                      <span className="text-[8px] text-slate-400 font-mono block truncate max-w-full">
+                        {mach.origin ? `${mach.origin} ` : ""}{mach.rpm ? `@${mach.rpm}RPM ` : ""}{mach.feeder ? `| F:${mach.feeder}` : ""}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => deleteMachine(mach.machineNo)}
+                    className="p-1 text-slate-350 hover:text-red-500 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => deleteMachine(mach.machineNo)}
-                  className="p-1 text-slate-350 hover:text-red-500 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
         </div>
 
@@ -277,6 +336,159 @@ export default function SettingsSection() {
         </div>
 
       </div>
+
+      {/* ADD MACHINE MODAL POPUP */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl border border-slate-250 shadow-2xl max-w-sm w-full p-5 space-y-4 relative">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                <Settings className="h-4.5 w-4.5 text-sky-600" /> Add Knitting Machine Spec
+              </h3>
+              <button 
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-slate-650 font-bold text-sm cursor-pointer p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleModalSubmit} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-slate-500 font-medium mb-1">M/C No / ID *</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full p-2 border border-slate-200 rounded-lg font-mono placeholder-slate-350"
+                    placeholder="e.g. M-111"
+                    value={modalMachNo}
+                    onChange={(e) => setModalMachNo(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-500 font-medium mb-1">Machine Type *</label>
+                  <select
+                    className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                    value={modalMachineType}
+                    onChange={(e) => setModalMachineType(e.target.value)}
+                  >
+                    <option value="Single Jersey">Single Jersey</option>
+                    <option value="Double Jersey">Double Jersey</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-500 font-medium mb-1">Fabric Type Capability *</label>
+                <select
+                  className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                  value={modalFabricType}
+                  onChange={(e) => setModalFabricType(e.target.value)}
+                >
+                  <option value="RIB">RIB</option>
+                  <option value="Interlock">Interlock</option>
+                  <option value="SJ">SJ</option>
+                  <option value="Fleece">Fleece</option>
+                  <option value="Auto Stripe SJ">Auto Stripe SJ</option>
+                  <option value="Double Jersey Auto Stripe">Double Jersey Auto Stripe</option>
+                  <option value="Single Jersey Jacquard">Single Jersey Jacquard</option>
+                  <option value="Double Jersey Jacquard">Double Jersey Jacquard</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-slate-500 font-medium mb-1">Machine Brand</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border border-slate-200 rounded-lg placeholder-slate-350"
+                    placeholder="e.g. Fukuhara"
+                    value={modalBrand}
+                    onChange={(e) => setModalBrand(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-500 font-medium mb-1">Machine Origin</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border border-slate-200 rounded-lg placeholder-slate-350"
+                    placeholder="e.g. Japan"
+                    value={modalOrigin}
+                    onChange={(e) => setModalOrigin(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-slate-500 font-medium mb-1">Dia (Inches) *</label>
+                  <input
+                    type="number"
+                    required
+                    className="w-full p-2 border border-slate-200 rounded-lg placeholder-slate-350"
+                    placeholder="e.g. 34"
+                    value={modalDia}
+                    onChange={(e) => setModalDia(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-500 font-medium mb-1">Gauge (GG) *</label>
+                  <input
+                    type="number"
+                    required
+                    className="w-full p-2 border border-slate-200 rounded-lg placeholder-slate-350"
+                    placeholder="e.g. 24"
+                    value={modalGG}
+                    onChange={(e) => setModalGG(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-slate-500 font-medium mb-1">RPM Speed</label>
+                  <input
+                    type="number"
+                    className="w-full p-2 border border-slate-200 rounded-lg placeholder-slate-350"
+                    placeholder="e.g. 25"
+                    value={modalRPM}
+                    onChange={(e) => setModalRPM(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-500 font-medium mb-1">Feeder Count</label>
+                  <input
+                    type="number"
+                    className="w-full p-2 border border-slate-200 rounded-lg placeholder-slate-350"
+                    placeholder="e.g. 96"
+                    value={modalFeeder}
+                    onChange={(e) => setModalFeeder(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 border border-slate-200 text-slate-600 font-bold py-2 rounded-lg hover:bg-slate-50 cursor-pointer text-center"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-lg cursor-pointer text-center"
+                >
+                  Save Machine
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
