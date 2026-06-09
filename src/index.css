@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Libre+Barcode+39&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-barcode: "Libre Barcode 39", cursive;
+}
+
+.font-barcode {
+  font-family: "Libre Barcode 39", cursive !important;
+  letter-spacing: 0px !important;
+  word-spacing: 0px !important;
+}
+
+@media print {
+  /* Disable screen background colors and shadows */
+  body, html, #root, #pro_app_root, main, #pro_main {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+    display: block !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+  
+  /* Hide overall screen navigation, cognitive banners, and modal controls */
+  .no-print, header, nav, button, select, input, .no-print * {
+    display: none !important;
+  }
+
+  /* Target specifically only the active modal printer cards */
+  body * {
+    visibility: hidden;
+  }
+
+  .print-invoice-card, .print-invoice-card * {
+    visibility: visible !important;
+  }
+
+  .print-invoice-card {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  /* Hide the modal overlay background and scroll styling on print */
+  [class*="bg-slate-900/"], #jobcard_overlay {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    position: absolute !important;
+  }
+}
+
