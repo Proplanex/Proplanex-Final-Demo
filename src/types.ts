@@ -105,7 +105,17 @@ export interface CompanyProfile {
   name: string;
   tagline: string;
   address: string;
-  phoneEmail: string;
+  phoneEmail: string; // for compatibility
+  logoUrl?: string; // base64 string
+  phone?: string;
+  email?: string;
+}
+
+export interface PoweredByProfile {
+  name: string;
+  slogan: string;
+  logoUrl?: string; // base64 string
+  qrCodeUrl?: string; // base64 string
 }
 
 export interface MachineConfig {
@@ -113,14 +123,38 @@ export interface MachineConfig {
   dia: number;
   gg: number;
   machineType?: string;
-  fabricType?: string;
+  fabricType?: string; // Knit Type
   brand?: string;
   origin?: string;
   rpm?: number;
   feeder?: number;
+  code?: string;
+  efficiency?: number;
+  capacityPerDay?: number;
 }
 
 export interface RunningFactory {
   name: string;
-  address: string;
+  address: string; // location
+  responsiblePerson?: string;
+  designation?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface ModulePermissions {
+  orders: "Read Only" | "Read/Write" | "Hide";
+  yarn: "Read Only" | "Read/Write" | "Hide";
+  planning: "Read Only" | "Read/Write" | "Hide";
+  production: "Read Only" | "Read/Write" | "Hide";
+  delivery: "Read Only" | "Read/Write" | "Hide";
+  billing: "Read Only" | "Read/Write" | "Hide";
+  settings: "Read Only" | "Read/Write" | "Hide";
+  admin: "Read Only" | "Read/Write" | "Hide";
+}
+
+export interface AppUser {
+  userId: string;
+  password: string;
+  permissions: ModulePermissions;
 }

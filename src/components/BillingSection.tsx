@@ -4,9 +4,13 @@ import { BillRecord, BillItem, DeliveryChallan, Order } from "../types";
 import { Plus, Search, FileDown, Printer, DollarSign, Receipt, BarChart3, HelpCircle, ExternalLink } from "lucide-react";
 import { downloadTableAsExcel, numberToWords } from "../utils/helpers";
 
-export default function BillingSection() {
+interface BillingSectionProps {
+  readOnly?: boolean;
+}
+
+export default function BillingSection({ readOnly = false }: BillingSectionProps) {
   const { 
-    orders, deliveryChallans, billRecords, addBillRecord, factories, companyProfile 
+    orders, deliveryChallans, billRecords, addBillRecord, factories, companyProfile, poweredByProfile 
   } = useAppState();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -272,13 +276,15 @@ export default function BillingSection() {
           >
             <FileDown className="h-4 w-4" /> Export Ledger
           </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            disabled={factories.length === 0}
-            className="flex-1 sm:flex-none bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs px-5 py-2 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-          >
-            <Plus className="h-4 w-4" /> Issue Invoice Bill
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              disabled={factories.length === 0}
+              className="flex-1 sm:flex-none bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs px-5 py-2 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <Plus className="h-4 w-4" /> Issue Invoice Bill
+            </button>
+          )}
         </div>
       </div>
 
@@ -472,11 +478,21 @@ export default function BillingSection() {
                   return (
                     <div className="bg-white p-5 rounded-xl border border-slate-250 shadow-sm space-y-4 text-slate-900 text-[10px] font-sans h-full">
                       {/* Brand Info */}
-                      <div className="text-center space-y-0.5 border-b border-slate-100 pb-2">
-                        <h4 className="font-bold text-slate-800 text-xs">{companyProfile.name}</h4>
-                        <p className="text-[7px] text-slate-400 uppercase tracking-widest">{companyProfile.tagline}</p>
-                        <p className="text-[7px] text-slate-450 leading-tight">{companyProfile.address}</p>
-                        <p className="text-[7px] text-slate-450 leading-tight">{companyProfile.phoneEmail}</p>
+                      <div className="flex items-center gap-3 border-b border-slate-100 pb-2">
+                        {companyProfile.logoUrl && (
+                          <img 
+                            src={companyProfile.logoUrl} 
+                            alt="Company Logo" 
+                            className="h-10 max-w-[100px] object-contain shrink-0"
+                            referrerPolicy="no-referrer"
+                          />
+                        )}
+                        <div className="text-left space-y-0.5 flex-1 min-w-0">
+                          <h4 className="font-bold text-slate-800 text-xs leading-snug">{companyProfile.name}</h4>
+                          <p className="text-[7px] text-slate-400 uppercase tracking-widest leading-none mb-1">{companyProfile.tagline}</p>
+                          <p className="text-[7px] text-slate-450 leading-tight">{companyProfile.address}</p>
+                          <p className="text-[7px] text-slate-450 leading-tight">{companyProfile.phoneEmail}</p>
+                        </div>
                       </div>
 
                       <p className="text-right text-[8px] font-mono">Date: {new Date().toISOString().split("T")[0]}</p>
@@ -592,11 +608,21 @@ export default function BillingSection() {
             {/* A4 TARGET LAYOUT FOR COMMERCIAL BILLS */}
             <div className="space-y-6 text-slate-900 font-sans p-2 border border-slate-150 rounded-xl print:border-none print:p-0">
               {/* BRAND HEADER */}
-              <div className="text-center space-y-1">
-                <h2 className="font-bold text-lg tracking-wide text-slate-800">{companyProfile.name}</h2>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest">{companyProfile.tagline}</p>
-                <p className="text-[10px] text-slate-400">{companyProfile.address}</p>
-                <p className="text-[10px] text-slate-400">{companyProfile.phoneEmail}</p>
+              <div className="flex items-center gap-4.5 pb-4 border-b border-slate-150">
+                {companyProfile.logoUrl && (
+                  <img 
+                    src={companyProfile.logoUrl} 
+                    alt="Company Logo" 
+                    className="h-16 max-w-[160px] object-contain shrink-0"
+                    referrerPolicy="no-referrer"
+                  />
+                )}
+                <div className="text-left space-y-0.5 flex-1 min-w-0">
+                  <h2 className="font-bold text-lg tracking-wide text-slate-800">{companyProfile.name}</h2>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest leading-none mb-1">{companyProfile.tagline}</p>
+                  <p className="text-[10px] text-slate-400 leading-tight">{companyProfile.address}</p>
+                  <p className="text-[10px] text-slate-400 leading-tight">{companyProfile.phoneEmail}</p>
+                </div>
               </div>
 
               {/* METADATA GRID */}
@@ -686,10 +712,39 @@ export default function BillingSection() {
               </div>
 
               {/* Footer Powered tagline */}
-              <div className="border-t border-slate-150 pt-3 text-center">
-                <p className="text-[10px] font-sans font-bold text-sky-850 tracking-wider">POWERED BY PROPLANEX</p>
-                <p className="text-[8px] text-slate-400 uppercase tracking-widest mt-0.5">Precious Planning ● Synchronized Production ● Next Gen Intelligence</p>
-              </div>
+              {poweredByProfile && (
+                <div className="border-t border-slate-150 pt-3.5 flex items-center justify-between font-sans text-left mt-3">
+                  {/* Left Side */}
+                  <div className="flex items-center gap-2.5">
+                    {poweredByProfile.logoUrl && (
+                      <img 
+                        src={poweredByProfile.logoUrl} 
+                        alt="Logo" 
+                        className="h-8 max-w-[80px] object-contain shrink-0" 
+                        referrerPolicy="no-referrer"
+                      />
+                    )}
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] font-bold text-slate-800 tracking-wide uppercase leading-none">
+                        Powered By {poweredByProfile.name || "Proplanex Software"}
+                      </p>
+                      <p className="text-[8px] text-slate-400 uppercase tracking-widest leading-none font-medium">
+                        {poweredByProfile.slogan || "Automated Floor Intelligence & Control Systems"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right Side */}
+                  {poweredByProfile.qrCodeUrl && (
+                    <img 
+                      src={poweredByProfile.qrCodeUrl} 
+                      alt="QR" 
+                      className="h-9 w-9 object-contain shrink-0 border border-slate-100 rounded p-0.5"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -4,10 +4,14 @@ import { Order, DeliveryChallan, GreyDeliveryItem, YarnReturnItem } from "../typ
 import { Plus, Search, FileText, Printer, FileDown, Trash2, HelpCircle, ExternalLink } from "lucide-react";
 import { downloadTableAsExcel } from "../utils/helpers";
 
-export default function DeliveryModule() {
+interface DeliveryModuleProps {
+  readOnly?: boolean;
+}
+
+export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps) {
   const { 
     orders, deliveryChallans, addDeliveryChallan, billRecords,
-    getYarnReceived, getTotalProduction, getTotalDelivery, factories, companyProfile 
+    getYarnReceived, getTotalProduction, getTotalDelivery, factories, companyProfile, poweredByProfile 
   } = useAppState();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -359,13 +363,15 @@ export default function DeliveryModule() {
           <h3 className="font-sans font-semibold text-slate-800">Dispatch, Delivery & Yarn Returns</h3>
           <p className="text-xs text-slate-400 mt-1">Deploy fabric rolls or record residual yarn sacks back to mills. Generates legally-compliant A4 gatepasses.</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          disabled={factories.length === 0}
-          className="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-medium text-sm px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
-        >
-          <Plus className="h-4 w-4" /> Issue Challan (Dispatch)
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            disabled={factories.length === 0}
+            className="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-medium text-sm px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" /> Issue Challan (Dispatch)
+          </button>
+        )}
       </div>
 
       {/* SEARCH BOX FILTERS */}
@@ -786,11 +792,21 @@ export default function DeliveryModule() {
                 
                 <div className="bg-white p-5 rounded-xl border border-slate-250 shadow-sm space-y-4 text-slate-900 text-[11px] leading-relaxed font-sans">
                   {/* COMPANY TOP INFO */}
-                  <div className="text-center space-y-0.5 border-b border-slate-100 pb-2">
-                    <h3 className="font-bold text-sm text-slate-800">{companyProfile.name}</h3>
-                    <p className="text-[8px] text-slate-400 uppercase tracking-wider">{companyProfile.tagline}</p>
-                    <p className="text-[8px] text-slate-400">{companyProfile.address}</p>
-                    <p className="text-[8px] text-slate-400">{companyProfile.phoneEmail}</p>
+                  <div className="flex items-center gap-3 border-b border-slate-100 pb-2">
+                    {companyProfile.logoUrl && (
+                      <img 
+                        src={companyProfile.logoUrl} 
+                        alt="Company Logo" 
+                        className="h-10 max-w-[100px] object-contain shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                    )}
+                    <div className="text-left space-y-0.5 flex-1 min-w-0">
+                      <h3 className="font-bold text-sm text-slate-800 leading-snug">{companyProfile.name}</h3>
+                      <p className="text-[8px] text-slate-400 uppercase tracking-wider leading-none mb-1">{companyProfile.tagline}</p>
+                      <p className="text-[8px] text-slate-400 leading-tight">{companyProfile.address}</p>
+                      <p className="text-[8px] text-slate-400 leading-tight">{companyProfile.phoneEmail}</p>
+                    </div>
                   </div>
 
                   {/* CHALLAN TITLE */}
@@ -948,11 +964,21 @@ export default function DeliveryModule() {
             {/* A4 TARGET LAYOUT FOR CHALLANS */}
             <div className="space-y-6 text-slate-900 font-sans p-2 border border-slate-150 rounded-xl print:border-none print:p-0">
               {/* Profile Header */}
-              <div className="text-center space-y-1">
-                <h2 className="font-bold text-lg tracking-wide text-slate-800">{companyProfile.name}</h2>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest">{companyProfile.tagline}</p>
-                <p className="text-[10px] text-slate-400">{companyProfile.address}</p>
-                <p className="text-[10px] text-slate-400">{companyProfile.phoneEmail}</p>
+              <div className="flex items-center gap-4.5 pb-4 border-b border-slate-150">
+                {companyProfile.logoUrl && (
+                  <img 
+                    src={companyProfile.logoUrl} 
+                    alt="Company Logo" 
+                    className="h-16 max-w-[160px] object-contain shrink-0"
+                    referrerPolicy="no-referrer"
+                  />
+                )}
+                <div className="text-left space-y-0.5 flex-1 min-w-0">
+                  <h2 className="font-bold text-lg tracking-wide text-slate-800">{companyProfile.name}</h2>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest leading-none mb-1">{companyProfile.tagline}</p>
+                  <p className="text-[10px] text-slate-400 leading-tight">{companyProfile.address}</p>
+                  <p className="text-[10px] text-slate-400 leading-tight">{companyProfile.phoneEmail}</p>
+                </div>
               </div>
 
               <div className="flex justify-between text-xs text-slate-650 border-t border-b border-slate-150 py-3 mt-4">
@@ -1076,10 +1102,39 @@ export default function DeliveryModule() {
               </div>
 
               {/* Powered tagline footer */}
-              <div className="border-t border-slate-150 pt-3 text-center">
-                <p className="text-[10px] font-sans font-bold text-sky-850 tracking-wider">POWERED BY PROPLANEX</p>
-                <p className="text-[8px] text-slate-400 uppercase tracking-widest mt-0.5">Precious Planning ● Synchronized Production ● Next Gen Intelligence</p>
-              </div>
+              {poweredByProfile && (
+                <div className="border-t border-slate-150 pt-3.5 flex items-center justify-between font-sans text-left mt-3">
+                  {/* Left Side */}
+                  <div className="flex items-center gap-2.5">
+                    {poweredByProfile.logoUrl && (
+                      <img 
+                        src={poweredByProfile.logoUrl} 
+                        alt="Logo" 
+                        className="h-8 max-w-[80px] object-contain shrink-0" 
+                        referrerPolicy="no-referrer"
+                      />
+                    )}
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] font-bold text-slate-800 tracking-wide uppercase leading-none">
+                        Powered By {poweredByProfile.name || "Proplanex Software"}
+                      </p>
+                      <p className="text-[8px] text-slate-400 uppercase tracking-widest leading-none font-medium">
+                        {poweredByProfile.slogan || "Automated Floor Intelligence & Control Systems"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right Side */}
+                  {poweredByProfile.qrCodeUrl && (
+                    <img 
+                      src={poweredByProfile.qrCodeUrl} 
+                      alt="QR" 
+                      className="h-9 w-9 object-contain shrink-0 border border-slate-100 rounded p-0.5"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

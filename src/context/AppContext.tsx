@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { 
   Order, YarnTransaction, MachinePlan, ProductionLog, 
-  DeliveryChallan, BillRecord, CompanyProfile, MachineConfig, RunningFactory 
+  DeliveryChallan, BillRecord, CompanyProfile, PoweredByProfile, MachineConfig, RunningFactory,
+  AppUser, ModulePermissions
 } from "../types";
 import { 
-  defaultCompanyProfile, defaultMachines, defaultFactories, 
+  defaultCompanyProfile, defaultPoweredByProfile, defaultMachines, defaultFactories, 
   defaultOrders, defaultYarnTransactions 
 } from "../utils/helpers";
 
@@ -16,9 +17,25 @@ interface AppContextType {
   deliveryChallans: DeliveryChallan[];
   billRecords: BillRecord[];
   companyProfile: CompanyProfile;
+  poweredByProfile: PoweredByProfile;
   machines: MachineConfig[];
   factories: RunningFactory[];
   
+  // User Authentication & Permissions
+  users: AppUser[];
+  currentUser: AppUser | null; // Note: "superadmin" will be structured inside this as well, e.g. { userId: "superadmin", permissions: ... }
+  trialDays: string; // "1 Day", etc.
+  trialExpirationDate: string | null;
+  isExpired: boolean;
+
+  loginUser: (userId: string, psw: string) => boolean;
+  logoutUser: () => void;
+  addUser: (user: AppUser) => void;
+  deleteUser: (userId: string) => void;
+  changeUserPassword: (userId: string, newPsw: string) => void;
+  updateUserPermissions: (userId: string, permissions: ModulePermissions) => void;
+  updateTrialLimit: (days: string) => void;
+
   // State Mutators
   addOrder: (order: Omit<Order, "orderNo" | "status">) => void;
   updateOrderStatus: (orderNo: string, status: Order["status"], manualOverride: boolean) => void;
@@ -30,6 +47,7 @@ interface AppContextType {
   
   // Settings Mutators
   updateCompanyProfile: (profile: CompanyProfile) => void;
+  updatePoweredByProfile: (profile: PoweredByProfile) => void;
   addMachine: (machine: MachineConfig) => void;
   deleteMachine: (machineNo: string) => void;
   addFactory: (factory: RunningFactory) => void;
@@ -44,7 +62,45 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const defaultUsers: AppUser[] = [
+  {
+    userId: "admin@proplanex.com",
+    password: "@Dmin123",
+    permissions: {
+      orders: "Read/Write",
+      yarn: "Read/Write",
+      planning: "Read/Write",
+      production: "Read/Write",
+      delivery: "Read/Write",
+      billing: "Read/Write",
+      settings: "Read/Write",
+      admin: "Read/Write"
+    }
+  }
+];
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Authentication & Trial States
+  const [users, setUsers] = useState<AppUser[]>(() => {
+    const saved = localStorage.getItem("pro_users");
+    return saved ? JSON.parse(saved) : defaultUsers;
+  });
+
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
+    const saved = localStorage.getItem("pro_current_user");
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [trialDays, setTrialDays] = useState<string>(() => {
+    return localStorage.getItem("pro_trial_days") || "No Limit";
+  });
+
+  const [trialExpirationDate, setTrialExpirationDate] = useState<string | null>(() => {
+    return localStorage.getItem("pro_trial_expiration") || null;
+  });
+
+  const [isExpired, setIsExpired] = useState<boolean>(false);
+
   // Read state from LocalStorage or seed with defaults
   const [orders, setOrders] = useState<Order[]>(() => {
     const data = localStorage.getItem("pro_orders");
@@ -79,6 +135,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile>(() => {
     const data = localStorage.getItem("pro_company_profile");
     return data ? JSON.parse(data) : defaultCompanyProfile;
+  });
+
+  const [poweredByProfile, setPoweredByProfile] = useState<PoweredByProfile>(() => {
+    const data = localStorage.getItem("pro_powered_by_profile");
+    return data ? JSON.parse(data) : defaultPoweredByProfile;
   });
 
   const [machines, setMachines] = useState<MachineConfig[]>(() => {
@@ -121,12 +182,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [companyProfile]);
 
   useEffect(() => {
+    localStorage.setItem("pro_powered_by_profile", JSON.stringify(poweredByProfile));
+  }, [poweredByProfile]);
+
+  useEffect(() => {
     localStorage.setItem("pro_machines", JSON.stringify(machines));
   }, [machines]);
 
   useEffect(() => {
     localStorage.setItem("pro_factories", JSON.stringify(factories));
   }, [factories]);
+
+  // Authentication & Trial Sync & Limit Check Effects
+  useEffect(() => {
+    localStorage.setItem("pro_users", JSON.stringify(users));
+  }, [users]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem("pro_current_user", JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem("pro_current_user");
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (trialDays === "No Limit" || !trialExpirationDate) {
+      setIsExpired(false);
+      return;
+    }
+    const checkExpiration = () => {
+      const today = new Date();
+      const todayStr = today.toISOString().split("T")[0];
+      const todayParts = todayStr.split("-").map(Number);
+      const expParts = trialExpirationDate.split("-").map(Number);
+      
+      const tDate = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]);
+      const eDate = new Date(expParts[0], expParts[1] - 1, expParts[2]);
+      setIsExpired(tDate.getTime() > eDate.getTime());
+    };
+    checkExpiration();
+    const interval = setInterval(checkExpiration, 60000); // Check once a minute
+    return () => clearInterval(interval);
+  }, [trialDays, trialExpirationDate]);
 
   // CALCULATION HELPERS
   const getYarnReceived = (orderNo: string): number => {
@@ -365,6 +463,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCompanyProfile(profile);
   };
 
+  const updatePoweredByProfile = (profile: PoweredByProfile) => {
+    setPoweredByProfile(profile);
+  };
+
   const addMachine = (mach: MachineConfig) => {
     setMachines(prev => {
       if (prev.some(m => m.machineNo.toLowerCase() === mach.machineNo.toLowerCase())) {
@@ -391,6 +493,97 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setFactories(prev => prev.filter(f => f.name !== name));
   };
 
+  // Auth & License Methods
+  const loginUser = (userId: string, psw: string): boolean => {
+    if (userId.toLowerCase() === "superadmin" && psw === "Proplanex@Raihan") {
+      const superObj: AppUser = {
+        userId: "superadmin",
+        password: "Proplanex@Raihan",
+        permissions: {
+          orders: "Read/Write",
+          yarn: "Read/Write",
+          planning: "Read/Write",
+          production: "Read/Write",
+          delivery: "Read/Write",
+          billing: "Read/Write",
+          settings: "Read/Write",
+          admin: "Read/Write"
+        }
+      };
+      setCurrentUser(superObj);
+      return true;
+    }
+    const match = users.find(u => u.userId.toLowerCase() === userId.toLowerCase() && u.password === psw);
+    if (match) {
+      setCurrentUser(match);
+      return true;
+    }
+    return false;
+  };
+
+  const logoutUser = () => {
+    setCurrentUser(null);
+  };
+
+  const addUser = (newUser: AppUser) => {
+    setUsers(prev => {
+      if (prev.some(u => u.userId.toLowerCase() === newUser.userId.toLowerCase())) {
+        alert("This User ID already exists!");
+        return prev;
+      }
+      return [...prev, newUser];
+    });
+  };
+
+  const deleteUser = (uId: string) => {
+    if (uId.toLowerCase() === "admin@proplanex.com") {
+      alert("Cannot delete the core administrator user!");
+      return;
+    }
+    setUsers(prev => prev.filter(u => u.userId.toLowerCase() !== uId.toLowerCase()));
+  };
+
+  const changeUserPassword = (uId: string, newPsw: string) => {
+    setUsers(prev => prev.map(u => {
+      if (u.userId.toLowerCase() === uId.toLowerCase()) {
+        return { ...u, password: newPsw };
+      }
+      return u;
+    }));
+    if (currentUser && currentUser.userId.toLowerCase() === uId.toLowerCase()) {
+      setCurrentUser(prev => prev ? { ...prev, password: newPsw } : null);
+    }
+  };
+
+  const updateUserPermissions = (uId: string, perms: ModulePermissions) => {
+    setUsers(prev => prev.map(u => {
+      if (u.userId.toLowerCase() === uId.toLowerCase()) {
+        return { ...u, permissions: perms };
+      }
+      return u;
+    }));
+    if (currentUser && currentUser.userId.toLowerCase() === uId.toLowerCase()) {
+      setCurrentUser(prev => prev ? { ...prev, permissions: perms } : null);
+    }
+  };
+
+  const updateTrialLimit = (days: string) => {
+    setTrialDays(days);
+    localStorage.setItem("pro_trial_days", days);
+    if (days === "No Limit") {
+      setTrialExpirationDate(null);
+      localStorage.removeItem("pro_trial_expiration");
+    } else {
+      const today = new Date();
+      // extract numeric days
+      const numDays = parseInt(days, 10);
+      today.setDate(today.getDate() + numDays);
+      const iso = today.toISOString().split("T")[0];
+      setTrialExpirationDate(iso);
+      localStorage.setItem("pro_trial_expiration", iso);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       orders,
@@ -400,8 +593,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deliveryChallans,
       billRecords,
       companyProfile,
+      poweredByProfile,
       machines,
       factories,
+      
+      users,
+      currentUser,
+      trialDays,
+      trialExpirationDate,
+      isExpired,
+
+      loginUser,
+      logoutUser,
+      addUser,
+      deleteUser,
+      changeUserPassword,
+      updateUserPermissions,
+      updateTrialLimit,
       
       addOrder,
       updateOrderStatus,
@@ -412,6 +620,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addBillRecord,
       
       updateCompanyProfile,
+      updatePoweredByProfile,
       addMachine,
       deleteMachine,
       addFactory,

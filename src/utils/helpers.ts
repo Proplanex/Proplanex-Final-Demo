@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { CompanyProfile, MachineConfig, RunningFactory, Order, YarnTransaction } from "../types";
+import { CompanyProfile, PoweredByProfile, MachineConfig, RunningFactory, Order, YarnTransaction } from "../types";
 
 export function numberToWords(num: number): string {
   const integerPart = Math.floor(num);
@@ -81,6 +81,13 @@ export const defaultCompanyProfile: CompanyProfile = {
   tagline: "Precious Planning ● Synchronized Production ● Next Gen Intelligence",
   address: "Sectors-4, Road 18, Uttara Commercial Area, Dhaka - 1230",
   phoneEmail: "Phone: +880 2 8931234 | Email: production@proplanex.com"
+};
+
+export const defaultPoweredByProfile: PoweredByProfile = {
+  name: "PROPLANEX SOFTWARE LTD",
+  slogan: "ENGINEERED BY PROPLANEX TECHNOLOGIES CO.",
+  logoUrl: "", // base64 string or empty
+  qrCodeUrl: "" // base64 string or empty
 };
 
 export const defaultMachines: MachineConfig[] = [

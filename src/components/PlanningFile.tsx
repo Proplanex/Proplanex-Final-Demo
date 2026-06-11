@@ -3,9 +3,13 @@ import { useAppState } from "../context/AppContext";
 import { Order, MachinePlan } from "../types";
 import { Search, Plus, Calendar, Settings, Printer, Scissors, HelpCircle, ChevronRight, CheckCircle, ExternalLink } from "lucide-react";
 
-export default function PlanningFile() {
+interface PlanningFileProps {
+  readOnly?: boolean;
+}
+
+export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
   const { 
-    orders, machinePlans, addMachinePlan, getPlannedQty, machines, companyProfile 
+    orders, machinePlans, addMachinePlan, getPlannedQty, machines, companyProfile, poweredByProfile 
   } = useAppState();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -184,7 +188,9 @@ export default function PlanningFile() {
                           {planBalance.toLocaleString()}
                         </td>
                         <td className="py-4 px-3 text-center">
-                          {planBalance > 0 ? (
+                          {readOnly ? (
+                            <span className="text-[10px] font-mono text-slate-400 font-semibold italic">Read-Only</span>
+                          ) : planBalance > 0 ? (
                             <button
                               onClick={() => handleOpenAssignModal(order)}
                               className="bg-sky-50 text-sky-700 hover:bg-sky-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 mx-auto cursor-pointer"
@@ -421,11 +427,21 @@ export default function PlanningFile() {
             {/* THE ACTUAL PRINT CARD FORMAT (TARGET OF A4 TICKET) */}
             <div id="jobcard_print_target" className="space-y-6 text-slate-900 font-sans p-2 border border-slate-100 rounded-xl print:border-none print:p-0">
               {/* Header Profile Info */}
-              <div className="text-center space-y-1">
-                <h2 className="font-sans font-bold text-lg tracking-wider text-slate-800">{companyProfile.name}</h2>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest">{companyProfile.tagline}</p>
-                <p className="text-[10px] text-slate-400">{companyProfile.address}</p>
-                <p className="text-[10px] text-slate-400">Contact: {companyProfile.phoneEmail}</p>
+              <div className="flex items-center gap-4.5 pb-4 border-b border-slate-150">
+                {companyProfile.logoUrl && (
+                  <img 
+                    src={companyProfile.logoUrl} 
+                    alt="Company Logo" 
+                    className="h-16 max-w-[160px] object-contain shrink-0"
+                    referrerPolicy="no-referrer"
+                  />
+                )}
+                <div className="text-left space-y-0.5 flex-1 min-w-0">
+                  <h2 className="font-sans font-bold text-lg tracking-wider text-slate-800">{companyProfile.name}</h2>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest leading-none mb-1">{companyProfile.tagline}</p>
+                  <p className="text-[10px] text-slate-400 leading-tight">{companyProfile.address}</p>
+                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">Contact: {companyProfile.phoneEmail}</p>
+                </div>
               </div>
 
               <hr className="border-slate-250" />
@@ -527,10 +543,39 @@ export default function PlanningFile() {
               </div>
 
               {/* Branding tagline footer */}
-              <div className="border-t border-slate-200 pt-3 text-center">
-                <p className="text-[10px] font-sans font-bold text-sky-800 tracking-wider">POWERED BY PROPLANEX </p>
-                <p className="text-[8px] text-slate-400 uppercase tracking-widest mt-0.5">Precious Planning ● Synchronized Production ● Next Gen Intelligence</p>
-              </div>
+              {poweredByProfile && (
+                <div className="border-t border-slate-200 pt-3.5 flex items-center justify-between font-sans text-left mt-3">
+                  {/* Left Side */}
+                  <div className="flex items-center gap-2.5">
+                    {poweredByProfile.logoUrl && (
+                      <img 
+                        src={poweredByProfile.logoUrl} 
+                        alt="Logo" 
+                        className="h-8 max-w-[80px] object-contain shrink-0" 
+                        referrerPolicy="no-referrer"
+                      />
+                    )}
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] font-bold text-slate-800 tracking-wide uppercase leading-none">
+                        Powered By {poweredByProfile.name || "Proplanex Software"}
+                      </p>
+                      <p className="text-[8px] text-slate-400 uppercase tracking-widest leading-none font-medium">
+                        {poweredByProfile.slogan || "Automated Floor Intelligence & Control Systems"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right Side */}
+                  {poweredByProfile.qrCodeUrl && (
+                    <img 
+                      src={poweredByProfile.qrCodeUrl} 
+                      alt="QR" 
+                      className="h-9 w-9 object-contain shrink-0 border border-slate-100 rounded p-0.5"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

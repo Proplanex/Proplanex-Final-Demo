@@ -3,7 +3,11 @@ import { useAppState } from "../context/AppContext";
 import { YarnTransaction } from "../types";
 import { Plus, Search, ChevronDown, ChevronUp, RefreshCw, BarChart2, Calendar } from "lucide-react";
 
-export default function YarnInventory() {
+interface YarnInventoryProps {
+  readOnly?: boolean;
+}
+
+export default function YarnInventory({ readOnly = false }: YarnInventoryProps) {
   const { 
     orders, yarnTransactions, addYarnTransaction, getYarnReceived 
   } = useAppState();
@@ -107,13 +111,15 @@ export default function YarnInventory() {
         <h3 className="font-sans font-semibold text-slate-800 text-sm flex items-center gap-2">
           <span>Yarn Allocation Ledgers</span>
         </h3>
-        <button
-          onClick={() => setShowAddModal(true)}
-          disabled={activeOrders.length === 0}
-          className="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-sm font-medium flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
-        >
-          <Plus className="h-4 w-4" /> Add Yarn Data
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            disabled={activeOrders.length === 0}
+            className="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-sm font-medium flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" /> Add Yarn Data
+          </button>
+        )}
       </div>
 
       {/* INVENTORY TABLE LEDGER */}

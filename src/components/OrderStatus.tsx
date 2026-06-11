@@ -3,10 +3,15 @@ import { useAppState } from "../context/AppContext";
 import { Order } from "../types";
 import { Plus, Search, ChevronDown, ChevronUp, AlertCircle, Sparkles, Filter } from "lucide-react";
 
-export default function OrderStatus() {
+interface OrderStatusProps {
+  readOnly?: boolean;
+}
+
+export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
   const { 
     orders, addOrder, getPlannedQty, getYarnReceived, 
-    getTotalProduction, getTotalDelivery, updateOrderStatus, factories 
+    getTotalProduction, getTotalDelivery, updateOrderStatus, factories,
+    machinePlans, productionLogs
   } = useAppState();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -184,12 +189,14 @@ export default function OrderStatus() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2 cursor-pointer transition-colors"
-        >
-          <Plus className="h-4 w-4" /> Add Order
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2 cursor-pointer transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Add Order
+          </button>
+        )}
       </div>
 
       {/* ORDERS LEDGER */}
@@ -274,7 +281,8 @@ export default function OrderStatus() {
                         </td>
                         <td className="py-4 px-3 text-center">
                           <select
-                            className="bg-transparent border-0 hover:bg-slate-100 rounded-lg px-2 py-1 text-xs font-medium focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                            disabled={readOnly}
+                            className={`bg-transparent border-0 rounded-lg px-2 py-1 text-xs font-medium focus:ring-2 focus:ring-sky-500 cursor-pointer ${readOnly ? "opacity-60 pointer-events-none" : "hover:bg-slate-100"}`}
                             value={order.status}
                             onChange={(e) => updateOrderStatus(order.orderNo, e.target.value as Order["status"], true)}
                           >
@@ -289,47 +297,156 @@ export default function OrderStatus() {
                       {isExpanded && (
                         <tr className="bg-slate-50">
                           <td colSpan={13} className="py-4 px-6 border-b border-slate-100">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                              {/* Left Columns - Yarn Specifications */}
-                              <div className="col-span-1 md:col-span-2 lg:col-span-3">
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 font-mono">Yarn Setup Specifications</p>
-                                {order.yarns.some(yarn => yarn.yc) ? (
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    {order.yarns.filter(yarn => yarn.yc).map((yarn, idx) => (
-                                      <div key={idx} className="bg-white p-3 rounded-xl border border-slate-100 shadow-3xs">
-                                        <p className="text-[10px] font-mono text-sky-600 font-semibold mb-1">Yarn Segment {idx + 1}</p>
-                                        <div className="space-y-1 text-xs">
-                                          <p className="font-semibold text-slate-800">{yarn.yc}</p>
-                                          <p className="text-slate-500"><span className="text-slate-400 font-mono">Lot:</span> {yarn.lot}</p>
-                                          <p className="text-slate-500"><span className="text-slate-400 font-mono">Spn:</span> {yarn.spinner}</p>
-                                          <p className="text-slate-500"><span className="text-slate-400 font-mono">S/L:</span> {yarn.sl}</p>
+                            <div className="space-y-5">
+                              {/* Top Details Row: Yarn setup & Remarks */}
+                              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                                {/* Left Columns - Yarn Specifications */}
+                                <div className="col-span-1 md:col-span-2 lg:col-span-3">
+                                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 font-mono">Yarn Setup Specifications</p>
+                                  {order.yarns.some(yarn => yarn.yc) ? (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                      {order.yarns.filter(yarn => yarn.yc).map((yarn, idx) => (
+                                        <div key={idx} className="bg-white p-3 rounded-xl border border-slate-100 shadow-3xs">
+                                          <p className="text-[10px] font-mono text-sky-600 font-semibold mb-1">Yarn Segment {idx + 1}</p>
+                                          <div className="space-y-1 text-xs">
+                                            <p className="font-semibold text-slate-800">{yarn.yc}</p>
+                                            <p className="text-slate-500"><span className="text-slate-400 font-mono">Lot:</span> {yarn.lot}</p>
+                                            <p className="text-slate-500"><span className="text-slate-400 font-mono">Spn:</span> {yarn.spinner}</p>
+                                            <p className="text-slate-500"><span className="text-slate-400 font-mono">S/L:</span> {yarn.sl}</p>
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-3xs text-center">
-                                    <p className="text-xs text-slate-400 italic py-2">No active yarn specifications mapped to this order fabric.</p>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Right column - Remarks and extra details */}
-                              <div className="bg-white p-3.5 rounded-xl border border-slate-100 self-start shadow-3xs">
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 font-mono">Fabric Details & Remarks</p>
-                                <div className="space-y-1.5 text-xs text-slate-600">
-                                  <p><span className="font-medium text-slate-400">Dia x GG:</span> {order.diaGG || "N/A"}</p>
-                                  <p><span className="font-medium text-slate-400">GSM / Finish:</span> {order.finishGSM} GSM | F.{order.finishDia}" Dia</p>
-                                  <p><span className="font-medium text-slate-400">Color Variant:</span> {order.color || "N/A"}</p>
-                                  <p><span className="font-medium text-slate-400">Factory Job No:</span> {order.factoryJobNo || "N/A"}</p>
-                                  <p><span className="font-medium text-slate-400">Price Rate:</span> {order.rate} BDT / Kg</p>
-                                  <div className="mt-3 pt-2 border-t border-slate-100">
-                                    <span className="font-medium text-slate-700 block mb-1">Order Remarks:</span>
-                                    <p className="p-2 bg-slate-50 rounded-lg text-slate-500 border border-slate-100 text-[11px] leading-relaxed italic">
-                                      {order.remarks || "No supplementary comments."}
-                                    </p>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-3xs text-center">
+                                      <p className="text-xs text-slate-400 italic py-2">No active yarn specifications mapped to this order fabric.</p>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {/* Right column - Remarks and extra details */}
+                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 self-start shadow-3xs">
+                                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 font-mono">Fabric Details & Remarks</p>
+                                  <div className="space-y-1.5 text-xs text-slate-600">
+                                    <p><span className="font-medium text-slate-400">Dia x GG:</span> {order.diaGG || "N/A"}</p>
+                                    <p><span className="font-medium text-slate-400">GSM / Finish:</span> {order.finishGSM} GSM | F.{order.finishDia}" Dia</p>
+                                    <p><span className="font-medium text-slate-400">Color Variant:</span> {order.color || "N/A"}</p>
+                                    <p><span className="font-medium text-slate-400">Factory Job No:</span> {order.factoryJobNo || "N/A"}</p>
+                                    <p><span className="font-medium text-slate-400">Price Rate:</span> {order.rate} BDT / Kg</p>
+                                    <div className="mt-3 pt-2 border-t border-slate-100">
+                                      <span className="font-medium text-slate-700 block mb-1">Order Remarks:</span>
+                                      <p className="p-2 bg-slate-50 rounded-lg text-slate-500 border border-slate-100 text-[11px] leading-relaxed italic">
+                                        {order.remarks || "No supplementary comments."}
+                                      </p>
+                                    </div>
                                   </div>
                                 </div>
+                              </div>
+
+                              {/* NEW TABULAR SECTION: Machine routing & live operations progress */}
+                              <div className="border-t border-slate-200/80 pt-4">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2.5 font-mono flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                                  Shop Floor Machine Allocation & Production Live Tracker
+                                </p>
+                                {(() => {
+                                  const plansForOrder = machinePlans.filter(p => p.orderNo === order.orderNo);
+                                  
+                                  if (plansForOrder.length === 0) {
+                                    return (
+                                      <div className="bg-white p-5 rounded-xl border border-dashed border-slate-200/80 text-center">
+                                        <AlertCircle className="h-5 w-5 text-slate-400 mx-auto mb-1.5" />
+                                        <span className="text-xs font-semibold text-slate-600 block">No Active Machine Schedules Found</span>
+                                        <p className="text-[11px] text-slate-400 mt-1 max-w-lg mx-auto">
+                                          This order has not been routed to any knitting machines yet. Open the <strong className="text-slate-500">Planning File</strong> tab to assign machines, allocate weights, and activate production.
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+
+                                  return (
+                                    <div className="border border-slate-200/60 rounded-xl overflow-hidden bg-white shadow-xs">
+                                      <table className="w-full text-left text-xs border-collapse">
+                                        <thead>
+                                          <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-500 font-mono uppercase text-[10px] tracking-wider">
+                                            <th className="py-2.5 px-4">Assigned M/C No.</th>
+                                            <th className="py-2.5 px-4">Job Card No.</th>
+                                            <th className="py-2.5 px-4 text-right">Plan Allocated (Kg)</th>
+                                            <th className="py-2.5 px-4 text-right">Actual Prod. (Kg)</th>
+                                            <th className="py-2.5 px-5">Ops Progress</th>
+                                            <th className="py-2.5 px-4 text-center">Machine Status</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-150 font-sans">
+                                          {plansForOrder.map((plan) => {
+                                            // Calculate actual production for this machine log and job card
+                                            const prodForPlan = productionLogs
+                                              .filter(log => log.orderNo === order.orderNo && log.machineNo === plan.machineNo && log.jobCardNo === plan.jobCardNo)
+                                              .reduce((sum, log) => sum + log.qty, 0);
+
+                                            const progressPercent = plan.plannedQty > 0 
+                                              ? Math.round(Math.min((prodForPlan / plan.plannedQty) * 100, 100)) 
+                                              : 0;
+
+                                            // Determine current machine operational status
+                                            let machineStatus = "Scheduled";
+                                            let statusColor = "bg-slate-50 text-slate-600 border-slate-200";
+
+                                            if (order.status === "Hold") {
+                                              machineStatus = "On Hold";
+                                              statusColor = "bg-amber-50 text-amber-700 border-amber-200";
+                                            } else if (order.status === "Complete" || prodForPlan >= plan.plannedQty) {
+                                              machineStatus = "Finished";
+                                              statusColor = "bg-emerald-50 text-emerald-700 border-emerald-200 font-medium";
+                                            } else if (prodForPlan > 0) {
+                                              machineStatus = "Running";
+                                              statusColor = "bg-sky-50 text-sky-700 border-sky-200 font-medium";
+                                            } else {
+                                              machineStatus = "Scheduled";
+                                              statusColor = "bg-blue-50 text-blue-700 border-blue-150";
+                                            }
+
+                                            return (
+                                              <tr key={plan.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="py-3 px-4 font-mono font-bold text-slate-800 flex items-center gap-1.5">
+                                                  <span className={`w-1.5 h-1.5 rounded-full ${machineStatus === 'Running' ? 'bg-sky-500 animate-pulse' : machineStatus === 'Finished' ? 'bg-emerald-500' : machineStatus === 'On Hold' ? 'bg-amber-500' : 'bg-slate-400'}`}></span>
+                                                  {plan.machineNo}
+                                                </td>
+                                                <td className="py-3 px-4 font-mono text-slate-600">{plan.jobCardNo}</td>
+                                                <td className="py-3 px-4 text-right font-mono font-semibold text-slate-800">{plan.plannedQty.toLocaleString()} Kg</td>
+                                                <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">{prodForPlan.toLocaleString()} Kg</td>
+                                                <td className="py-3 px-5">
+                                                  <div className="flex items-center gap-3 w-full">
+                                                    <div className="relative w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                      <div 
+                                                        className={`absolute left-0 top-0 h-full rounded-full transition-all duration-300 ${
+                                                          progressPercent === 100 
+                                                            ? 'bg-emerald-500' 
+                                                            : progressPercent > 50 
+                                                            ? 'bg-sky-500' 
+                                                            : progressPercent > 0 
+                                                            ? 'bg-amber-500' 
+                                                            : 'bg-slate-300'
+                                                        }`}
+                                                        style={{ width: `${progressPercent}%` }}
+                                                      ></div>
+                                                    </div>
+                                                    <span className="font-mono text-[11px] text-slate-500 font-semibold w-8 text-right shrink-0">{progressPercent}%</span>
+                                                  </div>
+                                                </td>
+                                                <td className="py-3 px-4 text-center">
+                                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono border ${statusColor}`}>
+                                                    {machineStatus}
+                                                  </span>
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </td>
