@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAppState } from "../context/AppContext";
+import GoogleSheetsSync from "./GoogleSheetsSync";
 import { 
   Settings, Plus, Trash2, ShieldAlert, CheckCircle, Search, 
   Image, Factory, Phone, Mail, MapPin, User, Activity, Edit3
@@ -221,6 +222,9 @@ export default function SettingsSection({ readOnly = false }: SettingsProps) {
           </div>
         </div>
       )}
+
+      {/* Google Sheets Sync Integration Panel */}
+      <GoogleSheetsSync />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
