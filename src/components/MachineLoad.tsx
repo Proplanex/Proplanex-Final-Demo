@@ -98,7 +98,8 @@ export default function MachineLoad({ readOnly = false }: MachineLoadProps) {
       });
     };
 
-    const status = machineStatusMap[machine.machineNo] || "Running";
+    const savedStatus = machineStatusMap[machine.machineNo];
+    const status = savedStatus !== undefined ? savedStatus : (daysToBeFree > 0 ? "Running" : "No Order");
     const fabricType = getLatestFabricType(machine.machineNo);
 
     return {
