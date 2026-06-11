@@ -58,6 +58,10 @@ interface AppContextType {
   getTotalProduction: (orderNo: string) => number;
   getTotalDelivery: (orderNo: string) => number;
   getPlannedQty: (orderNo: string) => number;
+  
+  // Machine status map for Module 7
+  machineStatusMap: Record<string, string>;
+  updateMachineStatus: (machineNo: string, status: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -74,7 +78,8 @@ const defaultUsers: AppUser[] = [
       delivery: "Read/Write",
       billing: "Read/Write",
       settings: "Read/Write",
-      admin: "Read/Write"
+      admin: "Read/Write",
+      machineload: "Read/Write"
     }
   }
 ];
@@ -152,6 +157,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return data ? JSON.parse(data) : defaultFactories;
   });
 
+  const [machineStatusMap, setMachineStatusMap] = useState<Record<string, string>>(() => {
+    const data = localStorage.getItem("pro_machine_statuses");
+    return data ? JSON.parse(data) : {};
+  });
+
   // Sync to LocalStorage on modifications
   useEffect(() => {
     localStorage.setItem("pro_orders", JSON.stringify(orders));
@@ -192,6 +202,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem("pro_factories", JSON.stringify(factories));
   }, [factories]);
+
+  useEffect(() => {
+    localStorage.setItem("pro_machine_statuses", JSON.stringify(machineStatusMap));
+  }, [machineStatusMap]);
 
   // Authentication & Trial Sync & Limit Check Effects
   useEffect(() => {
@@ -467,6 +481,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPoweredByProfile(profile);
   };
 
+  const updateMachineStatus = (machineNo: string, status: string) => {
+    setMachineStatusMap(prev => ({
+      ...prev,
+      [machineNo]: status
+    }));
+  };
+
   const addMachine = (mach: MachineConfig) => {
     setMachines(prev => {
       if (prev.some(m => m.machineNo.toLowerCase() === mach.machineNo.toLowerCase())) {
@@ -507,7 +528,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           delivery: "Read/Write",
           billing: "Read/Write",
           settings: "Read/Write",
-          admin: "Read/Write"
+          admin: "Read/Write",
+          machineload: "Read/Write"
         }
       };
       setCurrentUser(superObj);
@@ -629,7 +651,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       getYarnReceived,
       getTotalProduction,
       getTotalDelivery,
-      getPlannedQty
+      getPlannedQty,
+      
+      machineStatusMap,
+      updateMachineStatus
     }}>
       {children}
     </AppContext.Provider>

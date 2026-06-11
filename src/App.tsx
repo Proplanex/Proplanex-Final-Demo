@@ -14,6 +14,7 @@ import BillingSection from "./components/BillingSection";
 import SettingsSection from "./components/Settings";
 import AdminPanel from "./components/AdminPanel";
 import LoginScreen from "./components/LoginScreen";
+import MachineLoad from "./components/MachineLoad";
 import { 
   Building2, Layers, Cpu, Compass, Truck, CreditCard, Settings, 
   Clock, LogOut, ShieldAlert, ShieldCheck, User, Users
@@ -46,6 +47,7 @@ function AppContent() {
     { id: "production", label: "Production Update" },
     { id: "delivery", label: "Delivery Module" },
     { id: "billing", label: "Billing Section" },
+    { id: "machineload", label: "Machine Load" },
     { id: "settings", label: "Settings Portal" },
     { id: "admin", label: "Admin Panel" }
   ];
@@ -83,6 +85,7 @@ function AppContent() {
   const pProduction = currentUser.permissions.production;
   const pDelivery = currentUser.permissions.delivery;
   const pBilling = currentUser.permissions.billing;
+  const pMachineLoad = currentUser.permissions.machineload;
   const pSettings = currentUser.permissions.settings;
   const pAdmin = currentUser.permissions.admin;
 
@@ -100,6 +103,8 @@ function AppContent() {
         return <DeliveryModule readOnly={pDelivery === "Read Only"} />;
       case "billing":
         return <BillingSection readOnly={pBilling === "Read Only"} />;
+      case "machineload":
+        return <MachineLoad readOnly={pMachineLoad === "Read Only"} />;
       case "settings":
         return <SettingsSection readOnly={pSettings === "Read Only"} />;
       case "admin":
@@ -219,6 +224,7 @@ function AppContent() {
                activeTab === "production" ? "Active Knitting Floor Logs" : 
                activeTab === "delivery" ? "Gatepass & Delivery Registers" : 
                activeTab === "billing" ? "Commercial Invoicing Accounts" : 
+               activeTab === "machineload" ? "Knitting Floor Load Status Checker" : 
                activeTab === "settings" ? "App & Profile Configurations" : "Account Access Matrix List"}
             </span>
           </div>

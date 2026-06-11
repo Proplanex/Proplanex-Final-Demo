@@ -151,6 +151,7 @@ export interface ModulePermissions {
   billing: "Read Only" | "Read/Write" | "Hide";
   settings: "Read Only" | "Read/Write" | "Hide";
   admin: "Read Only" | "Read/Write" | "Hide";
+  machineload: "Read Only" | "Read/Write" | "Hide";
 }
 
 export interface AppUser {

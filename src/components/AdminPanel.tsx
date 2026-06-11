@@ -22,7 +22,8 @@ export default function AdminPanel() {
     delivery: "Read/Write",
     billing: "Read/Write",
     settings: "Read/Write",
-    admin: "Hide"
+    admin: "Hide",
+    machineload: "Read/Write"
   });
 
   const [selectedUserForEdit, setSelectedUserForEdit] = useState<AppUser | null>(null);
@@ -61,7 +62,8 @@ export default function AdminPanel() {
       delivery: "Read/Write",
       billing: "Read/Write",
       settings: "Read/Write",
-      admin: "Hide"
+      admin: "Hide",
+      machineload: "Read/Write"
     });
 
     setActionMsg("User created successfully!");
@@ -387,16 +389,17 @@ export default function AdminPanel() {
             <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150/65 space-y-2.5">
               <p className="text-[10px] font-mono font-bold text-indigo-600 uppercase tracking-widest">Initial Module Access Permissions</p>
               
-              {Object.keys(newPermissions).map((moduleKey) => {
-                const k = moduleKey as keyof ModulePermissions;
-                const label = 
-                  k === "orders" ? "Order Status" :
-                  k === "yarn" ? "Yarn Inventory" :
-                  k === "planning" ? "Planning File" :
-                  k === "production" ? "Production Update" :
-                  k === "delivery" ? "Delivery Section" :
-                  k === "billing" ? "Billing Section" :
-                  k === "settings" ? "Settings Portal" : "Admin Panel";
+                {Object.keys(newPermissions).map((moduleKey) => {
+                  const k = moduleKey as keyof ModulePermissions;
+                  const label = 
+                    k === "orders" ? "Order Status" :
+                    k === "yarn" ? "Yarn Inventory" :
+                    k === "planning" ? "Planning File" :
+                    k === "production" ? "Production Update" :
+                    k === "delivery" ? "Delivery Section" :
+                    k === "billing" ? "Billing Section" :
+                    k === "settings" ? "Settings Portal" :
+                    k === "machineload" ? "Machine Load" : "Admin Panel";
 
                 return (
                   <div key={k} className="flex items-center justify-between gap-2 border-b border-slate-200/50 pb-1.5 last:border-b-0 last:pb-0">
@@ -486,7 +489,8 @@ export default function AdminPanel() {
                               mod === "production" ? "Production" :
                               mod === "delivery" ? "Delivery" :
                               mod === "billing" ? "Billing" :
-                              mod === "settings" ? "Settings" : "Admin";
+                              mod === "settings" ? "Settings" : 
+                              mod === "machineload" ? "Load" : "Admin";
 
                             return (
                               <div key={mod} className="flex flex-col items-center justify-between border-r border-slate-200 last:border-r-0 px-1 py-0.5">
