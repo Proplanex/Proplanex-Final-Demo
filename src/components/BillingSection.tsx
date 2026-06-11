@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useAppState } from "../context/AppContext";
 import { BillRecord, BillItem, DeliveryChallan, Order } from "../types";
-import { Plus, Search, FileDown, Printer, DollarSign, Receipt, BarChart3, HelpCircle, ExternalLink } from "lucide-react";
+import { Plus, Search, FileDown, Printer, DollarSign, Receipt, BarChart3, HelpCircle, ExternalLink, Trash2 } from "lucide-react";
 import { downloadTableAsExcel, numberToWords } from "../utils/helpers";
+import { formatDateDDMMYYYY } from "./DeliveryModule";
 
 interface BillingSectionProps {
   readOnly?: boolean;
@@ -10,7 +11,7 @@ interface BillingSectionProps {
 
 export default function BillingSection({ readOnly = false }: BillingSectionProps) {
   const { 
-    orders, deliveryChallans, billRecords, addBillRecord, factories, companyProfile, poweredByProfile 
+    orders, deliveryChallans, billRecords, addBillRecord, factories, companyProfile, poweredByProfile, deleteBillRecord, canCurrentUserDeleteData 
   } = useAppState();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -302,12 +303,13 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
                 <th className="py-3 px-3 text-right">Invoiced weight</th>
                 <th className="py-3 px-4 text-right">Invoiced Amount (BDT)</th>
                 <th className="py-3 px-3 text-center">Ticket</th>
+                {canCurrentUserDeleteData() && <th className="py-3 px-3 text-center w-12">Delete</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono">
               {billRecords.length === 0 ? (
                 <tr className="font-sans">
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={canCurrentUserDeleteData() ? 9 : 8} className="py-12 text-center text-slate-400">
                     No billing transactions recorded yet. Choose "Issue Invoice Bill" above.
                   </td>
                 </tr>
@@ -319,7 +321,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
                   return (
                     <tr key={bill.id || bidx} className="hover:bg-slate-50/50">
                       <td className="py-3.5 px-4 font-bold text-indigo-750">{bill.id}</td>
-                      <td className="py-3.5 px-3 text-slate-500">{bill.date}</td>
+                      <td className="py-3.5 px-3 text-slate-500">{formatDateDDMMYYYY(bill.date)}</td>
                       <td className="py-3.5 px-3 font-medium font-sans text-slate-800">{bill.factoryName}</td>
                       <td className="py-3.5 px-3 max-w-[120px] truncate" title={uniqueChallanNos.join(", ")}>
                         {uniqueChallanNos.map(no => (
@@ -346,6 +348,22 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
                           <Printer className="h-3 w-3" /> Invoice
                         </button>
                       </td>
+                      {canCurrentUserDeleteData() && (
+                        <td className="py-2.5 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete invoice ${bill.id}? This will restore the bill balance for its associated delivery challans.`)) {
+                                deleteBillRecord(bill.id);
+                              }
+                            }}
+                            className="text-slate-300 hover:text-red-500 hover:bg-slate-50 p-1.5 rounded transition-colors cursor-pointer inline-flex items-center"
+                            title="Delete Invoice"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -409,7 +427,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
                             <option value="">-- Choose Pending Challan --</option>
                             {avail.map(ch => (
                               <option key={ch.challanNo} value={ch.challanNo}>
-                                {ch.challanNo} (Dated: {ch.date}) - {ch.greyItems?.length} items
+                                {ch.challanNo} (Dated: {formatDateDDMMYYYY(ch.date)}) - {ch.greyItems?.length} items
                               </option>
                             ))}
                           </select>
@@ -571,6 +589,12 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
               <div className="flex gap-2">
                 <button
                   onClick={triggerPrintBill}
+                  className="bg-red-650 hover:bg-red-750 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                >
+                  <FileDown className="h-4 w-4" /> Download PDF
+                </button>
+                <button
+                  onClick={triggerPrintBill}
                   className="bg-indigo-650 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
                 >
                   <Printer className="h-4 w-4" /> Print Bill
@@ -591,7 +615,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
                 <div className="space-y-1">
                   <p className="font-semibold text-amber-900">Browser Security Restricts Printing inside Editor Sandbox</p>
                   <p className="text-amber-700 text-[11px]">
-                    Your web browser blocks print commands nested inside secure development iframes. To print or save files as PDF perfectly, please click <strong>"Open in New Tab" / "Open"</strong> at the top-right corner of the web simulator in AI Studio, or launch via the link below:
+                    To save files as vector PDF perfectly, please click <strong>"Download PDF"</strong> and select <strong>"Save as PDF"</strong> as your printer destination. If blockages persist, open in a standalone tab:
                   </p>
                   <a 
                     href={window.location.href} 
@@ -599,7 +623,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
                     rel="noopener noreferrer" 
                     className="inline-flex items-center gap-1 font-mono text-[10px] font-bold bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-2 uppercase tracking-wider cursor-pointer"
                   >
-                    Open Standalone & Print <ExternalLink className="h-3 w-3" />
+                    Open Standalone & Save PDF <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
               </div>
@@ -633,7 +657,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
                 </div>
                 <div className="space-y-1 text-right">
                   <p>Invoice Bill ID: <strong className="text-indigo-800 font-mono text-sm">{activePrintBill.id}</strong></p>
-                  <p>Date of Issue: <strong className="text-slate-800">{activePrintBill.date}</strong></p>
+                  <p>Date of Issue: <strong className="text-slate-800">{formatDateDDMMYYYY(activePrintBill.date)}</strong></p>
                   <p>Payment Status: <strong className="text-emerald-700 font-bold font-mono">DUE ON RECEIPT</strong></p>
                 </div>
               </div>
@@ -713,36 +737,43 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
 
               {/* Footer Powered tagline */}
               {poweredByProfile && (
-                <div className="border-t border-slate-150 pt-4 flex items-center justify-between font-sans text-left mt-3">
-                  {/* Left Side */}
-                  <div className="flex items-center gap-3">
-                    {poweredByProfile.logoUrl && (
+                <div className="border-t border-slate-150 pt-3 mt-3">
+                  {/* Software Generated subtitle notice exactly layout block 2 */}
+                  <div className="text-[10px] text-slate-500 font-sans tracking-wide mb-3 uppercase font-semibold text-center italic opacity-95">
+                    This is a software generated report.
+                  </div>
+                  
+                  <div className="flex items-center justify-between font-sans text-left">
+                    {/* Left Side */}
+                    <div className="flex items-center gap-3">
+                      {poweredByProfile.logoUrl && (
+                        <img 
+                          src={poweredByProfile.logoUrl} 
+                          alt="Logo" 
+                          className="h-12 max-w-[120px] object-contain shrink-0" 
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <div className="space-y-0.5">
+                        <p className="text-[11px] font-bold text-slate-800 tracking-wide uppercase leading-tight">
+                          Powered By {poweredByProfile.name || "Proplanex Software"}
+                        </p>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-widest leading-none font-medium">
+                          {poweredByProfile.slogan || "Automated Floor Intelligence & Control Systems"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right Side */}
+                    {poweredByProfile.qrCodeUrl && (
                       <img 
-                        src={poweredByProfile.logoUrl} 
-                        alt="Logo" 
-                        className="h-12 max-w-[120px] object-contain shrink-0" 
+                        src={poweredByProfile.qrCodeUrl} 
+                        alt="QR" 
+                        className="h-16 w-16 object-contain shrink-0 border border-slate-200 bg-white rounded-lg p-1 shadow-sm"
                         referrerPolicy="no-referrer"
                       />
                     )}
-                    <div className="space-y-0.5">
-                      <p className="text-[11px] font-bold text-slate-800 tracking-wide uppercase leading-tight">
-                        Powered By {poweredByProfile.name || "Proplanex Software"}
-                      </p>
-                      <p className="text-[9px] text-slate-400 uppercase tracking-widest leading-none font-medium">
-                        {poweredByProfile.slogan || "Automated Floor Intelligence & Control Systems"}
-                      </p>
-                    </div>
                   </div>
-
-                  {/* Right Side */}
-                  {poweredByProfile.qrCodeUrl && (
-                    <img 
-                      src={poweredByProfile.qrCodeUrl} 
-                      alt="QR" 
-                      className="h-16 w-16 object-contain shrink-0 border border-slate-200 bg-white rounded-lg p-1 shadow-sm"
-                      referrerPolicy="no-referrer"
-                    />
-                  )}
                 </div>
               )}
             </div>

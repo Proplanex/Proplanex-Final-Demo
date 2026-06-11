@@ -221,10 +221,10 @@ function AppContent() {
               {activeTab === "orders" ? "Master Orders Status Window" : 
                activeTab === "yarn" ? "Yarn Inventory Stocks & Lots" : 
                activeTab === "planning" ? "Production Planning Cards" : 
-               activeTab === "production" ? "Active Knitting Floor Logs" : 
+               activeTab === "production" ? "Active Knitting Production Logs" : 
                activeTab === "delivery" ? "Gatepass & Delivery Registers" : 
                activeTab === "billing" ? "Commercial Invoicing Accounts" : 
-               activeTab === "machineload" ? "Knitting Floor Load Status Checker" : 
+               activeTab === "machineload" ? "Knitting Load Status Checker" : 
                activeTab === "settings" ? "App & Profile Configurations" : "Account Access Matrix List"}
             </span>
           </div>

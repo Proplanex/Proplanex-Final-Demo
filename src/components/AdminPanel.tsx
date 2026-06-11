@@ -9,7 +9,7 @@ export default function AdminPanel() {
   const { 
     users, currentUser, addUser, deleteUser, changeUserPassword, 
     updateUserPermissions, trialDays, trialExpirationDate, updateTrialLimit,
-    poweredByProfile, updatePoweredByProfile 
+    poweredByProfile, updatePoweredByProfile, canCurrentUserDeleteData 
   } = useAppState();
 
   const [newUserId, setNewUserId] = useState("");
@@ -513,18 +513,18 @@ export default function AdminPanel() {
                       </td>
                       <td className="py-3 px-3 text-right">
                         <button
-                          disabled={isPrimaryAdmin}
+                          disabled={isPrimaryAdmin || !canCurrentUserDeleteData()}
                           onClick={() => {
                             if (window.confirm(`Are you sure you want to delete user registry for ${usr.userId}?`)) {
                               deleteUser(usr.userId);
                             }
                           }}
                           className={`p-2 rounded-lg cursor-pointer ${
-                            isPrimaryAdmin 
-                              ? "text-slate-300 pointer-events-none" 
+                            (isPrimaryAdmin || !canCurrentUserDeleteData())
+                              ? "text-slate-355 pointer-events-none opacity-50" 
                               : "text-slate-400 hover:text-red-500 hover:bg-slate-50"
                           }`}
-                          title={isPrimaryAdmin ? "Cannot delete Primary System Admin" : "Delete user"}
+                          title={isPrimaryAdmin ? "Cannot delete Primary System Admin" : !canCurrentUserDeleteData() ? "Only Admin/Superadmin can delete users" : "Delete user"}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

@@ -38,12 +38,18 @@ interface AppContextType {
 
   // State Mutators
   addOrder: (order: Omit<Order, "orderNo" | "status">) => void;
+  deleteOrder: (orderNo: string) => void;
   updateOrderStatus: (orderNo: string, status: Order["status"], manualOverride: boolean) => void;
   addYarnTransaction: (tx: Omit<YarnTransaction, "id">) => void;
+  deleteYarnTransaction: (id: string) => void;
   addMachinePlan: (plan: Omit<MachinePlan, "id" | "jobCardNo">) => void;
+  deleteMachinePlan: (id: string) => void;
   addProductionLog: (log: Omit<ProductionLog, "id">) => void;
+  deleteProductionLog: (id: string) => void;
   addDeliveryChallan: (challan: DeliveryChallan) => void;
+  deleteDeliveryChallan: (challanNo: string) => void;
   addBillRecord: (bill: BillRecord) => void;
+  deleteBillRecord: (id: string) => void;
   
   // Settings Mutators
   updateCompanyProfile: (profile: CompanyProfile) => void;
@@ -62,6 +68,9 @@ interface AppContextType {
   // Machine status map for Module 7
   machineStatusMap: Record<string, string>;
   updateMachineStatus: (machineNo: string, status: string) => void;
+
+  // General Deletion Authority check
+  canCurrentUserDeleteData: () => boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -129,7 +138,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [deliveryChallans, setDeliveryChallans] = useState<DeliveryChallan[]>(() => {
     const data = localStorage.getItem("pro_delivery_challans");
-    return data ? JSON.parse(data) : [];
+    if (data) {
+      try {
+        const parsed: DeliveryChallan[] = JSON.parse(data);
+        return parsed.map(ch => ({
+          ...ch,
+          challanNo: ch.challanNo.startsWith("GP-") 
+            ? ch.challanNo.replace("GP-", "CH-") 
+            : ch.challanNo
+        }));
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
   });
 
   const [billRecords, setBillRecords] = useState<BillRecord[]>(() => {
@@ -497,7 +519,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const canCurrentUserDeleteData = (): boolean => {
+    if (!currentUser) return false;
+    const uid = currentUser.userId.toLowerCase();
+    return uid === "superadmin" || uid === "admin@proplanex.com" || uid.includes("admin");
+  };
+
+  const checkDeletePermission = (): boolean => {
+    if (!canCurrentUserDeleteData()) {
+      alert("Unauthorized! Only Admin or Superadmin is allowed to delete data.");
+      return false;
+    }
+    return true;
+  };
+
+  const deleteOrder = (orderNo: string) => {
+    if (!checkDeletePermission()) return;
+    setOrders(prev => prev.filter(o => o.orderNo !== orderNo));
+  };
+
+  const deleteYarnTransaction = (id: string) => {
+    if (!checkDeletePermission()) return;
+    setYarnTransactions(prev => prev.filter(tx => tx.id !== id));
+  };
+
+  const deleteMachinePlan = (id: string) => {
+    if (!checkDeletePermission()) return;
+    setMachinePlans(prev => prev.filter(p => p.id !== id));
+  };
+
+  const deleteProductionLog = (id: string) => {
+    if (!checkDeletePermission()) return;
+    setProductionLogs(prev => prev.filter(log => log.id !== id));
+  };
+
+  const deleteDeliveryChallan = (challanNo: string) => {
+    if (!checkDeletePermission()) return;
+    setDeliveryChallans(prev => prev.filter(ch => ch.challanNo !== challanNo));
+  };
+
+  const deleteBillRecord = (id: string) => {
+    if (!checkDeletePermission()) return;
+    setBillRecords(prev => prev.filter(b => b.id !== id));
+  };
+
   const deleteMachine = (machNo: string) => {
+    if (!checkDeletePermission()) return;
     setMachines(prev => prev.filter(m => m.machineNo !== machNo));
   };
 
@@ -511,6 +578,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteFactory = (name: string) => {
+    if (!checkDeletePermission()) return;
     setFactories(prev => prev.filter(f => f.name !== name));
   };
 
@@ -558,6 +626,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteUser = (uId: string) => {
+    if (!checkDeletePermission()) return;
     if (uId.toLowerCase() === "admin@proplanex.com") {
       alert("Cannot delete the core administrator user!");
       return;
@@ -634,12 +703,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateTrialLimit,
       
       addOrder,
+      deleteOrder,
       updateOrderStatus,
       addYarnTransaction,
+      deleteYarnTransaction,
       addMachinePlan,
+      deleteMachinePlan,
       addProductionLog,
+      deleteProductionLog,
       addDeliveryChallan,
+      deleteDeliveryChallan,
       addBillRecord,
+      deleteBillRecord,
       
       updateCompanyProfile,
       updatePoweredByProfile,
@@ -654,7 +729,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       getPlannedQty,
       
       machineStatusMap,
-      updateMachineStatus
+      updateMachineStatus,
+      canCurrentUserDeleteData
     }}>
       {children}
     </AppContext.Provider>

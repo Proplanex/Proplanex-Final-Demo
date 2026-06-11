@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAppState } from "../context/AppContext";
 import { Order, MachinePlan, ProductionLog } from "../types";
-import { Search, Barcode, Calendar, FileDown, Plus, Clipboard, CheckCircle, Smartphone } from "lucide-react";
+import { Search, Barcode, Calendar, FileDown, Plus, Clipboard, CheckCircle, Smartphone, Trash2 } from "lucide-react";
 import { downloadTableAsExcel } from "../utils/helpers";
 
 const getShiftFromTimeStr = (dateTimeString: string): "A" | "B" | "C" => {
@@ -33,7 +33,7 @@ interface ProductionUpdateProps {
 
 export default function ProductionUpdate({ readOnly = false }: ProductionUpdateProps) {
   const { 
-    orders, machinePlans, productionLogs, addProductionLog, getPlannedQty, getTotalProduction 
+    orders, machinePlans, productionLogs, addProductionLog, getPlannedQty, getTotalProduction, deleteProductionLog, canCurrentUserDeleteData 
   } = useAppState();
 
   // Operator Barcode Search input
@@ -75,7 +75,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
 
     const matchedPlan = machinePlans.find(p => p.jobCardNo.toUpperCase() === cleanBarcode);
     if (!matchedPlan) {
-      alert(`Job Card barcode "${cleanBarcode}" not found on shop floor schedule.`);
+      alert(`Job Card barcode "${cleanBarcode}" not found on active production schedule.`);
       return;
     }
 
@@ -236,7 +236,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
         </div>
         <div className="max-w-xl space-y-4 relative z-10">
           <div className="flex items-center gap-2 text-indigo-400 font-mono text-xs uppercase tracking-widest font-semibold">
-            <Smartphone className="h-4 w-4" /> Operator Shop Floor Integration
+            <Smartphone className="h-4 w-4" /> Operator Production Integration
           </div>
           <div>
             <h2 className="font-sans font-bold text-lg text-white">Daily Production Output Capture</h2>
@@ -275,7 +275,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
         {/* Subtotal Banner */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-slate-800">Shop Floor Production Ledger</h3>
+            <h3 className="text-sm font-semibold text-slate-800">Knitting Production Ledger</h3>
             <p className="text-xs text-slate-400 mt-0.5">Filter of daily Knitting, Carding, and Terry output logs.</p>
           </div>
 
@@ -385,12 +385,13 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                 <th className="py-3 px-3">SL (S/L1+S/L2+S/L3+S/L4)</th>
                 <th className="py-3 px-3">Roll Number</th>
                 <th className="py-3 px-3 text-right">Total Production (Kg)</th>
+                {canCurrentUserDeleteData() && <th className="py-3 px-3 text-center w-12">Delete</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono">
               {filteredLogs.length === 0 ? (
                 <tr className="font-sans">
-                  <td colSpan={18} className="py-12 text-center text-slate-400">
+                  <td colSpan={canCurrentUserDeleteData() ? 19 : 18} className="py-12 text-center text-slate-400">
                     No production recordings match selected indices.
                   </td>
                 </tr>
@@ -449,6 +450,21 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                       <td className="py-3 px-3 text-slate-500 truncate" title={combinedSL}>{combinedSL}</td>
                       <td className="py-3 px-3 font-bold text-indigo-700 whitespace-nowrap truncate">{rollNumber}</td>
                       <td className="py-3 px-3 text-right font-bold text-slate-900 text-sm whitespace-nowrap">{log.qty.toLocaleString()} Kg</td>
+                      {canCurrentUserDeleteData() && (
+                        <td className="py-3 px-3 text-center">
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete production log for Roll ${rollNumber}?`)) {
+                                deleteProductionLog(log.id);
+                              }
+                            }}
+                            className="text-slate-300 hover:text-red-500 hover:bg-slate-50 p-1 rounded transition-colors cursor-pointer"
+                            title="Delete Production Log"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })

@@ -157,7 +157,7 @@ export default function MachineLoad({ readOnly = false }: MachineLoadProps) {
       {/* 1. TOP METRICS INDICATORS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         
-        {/* KPI: Active Floor State */}
+        {/* KPI: Active Plant State */}
         <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-xs flex items-center gap-4">
           <div className="h-12 w-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-650 shrink-0">
             <Cpu className="h-5.5 w-5.5" />
@@ -165,7 +165,7 @@ export default function MachineLoad({ readOnly = false }: MachineLoadProps) {
           <div>
             <p className="text-[10px] uppercase font-mono font-bold tracking-widest text-slate-400">Total Registered</p>
             <h3 className="font-bold text-lg text-slate-800 leading-tight mt-0.5">{totalMachinesCount} Machines</h3>
-            <p className="text-[10px] text-slate-500 mt-0.5">Floor Capacity</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Plant Capacity</p>
           </div>
         </div>
 
@@ -201,9 +201,9 @@ export default function MachineLoad({ readOnly = false }: MachineLoadProps) {
             <Calendar className="h-5.5 w-5.5" />
           </div>
           <div>
-            <p className="text-[10px] uppercase font-mono font-bold tracking-widest text-slate-400">Floor Completion</p>
+            <p className="text-[10px] uppercase font-mono font-bold tracking-widest text-slate-400">Production Completion</p>
             <h3 className="font-bold text-lg text-slate-800 leading-tight mt-0.5">~{averageDaysToFree} Days Avg.</h3>
-            <p className="text-[10px] text-slate-500 mt-0.5">Until floor releases</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Until machine releases</p>
           </div>
         </div>
       </div>
@@ -212,7 +212,7 @@ export default function MachineLoad({ readOnly = false }: MachineLoadProps) {
       <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-3xs space-y-4">
         <div className="flex items-center gap-2 pb-1.5 border-b border-indigo-50/50">
           <SlidersHorizontal className="h-4 w-4 text-indigo-600" />
-          <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider font-mono">Floor Filter Options</h3>
+          <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider font-mono">Machine Filter Options</h3>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -462,7 +462,7 @@ export default function MachineLoad({ readOnly = false }: MachineLoadProps) {
                   <td colSpan={14} className="py-12 text-center text-slate-400 italic">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <Server className="h-8 w-8 text-slate-300" />
-                      <p className="text-xs">No floor machines match the specified search parameters.</p>
+                      <p className="text-xs">No registered machines match the specified search parameters.</p>
                     </div>
                   </td>
                 </tr>
@@ -471,12 +471,12 @@ export default function MachineLoad({ readOnly = false }: MachineLoadProps) {
           </table>
         </div>
 
-        {/* 4. DYNAMIC FLOOR ANNOUNCEMENT / FOOTER SUMMARY */}
+        {/* 4. DYNAMIC ANNOUNCEMENT / FOOTER SUMMARY */}
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-[11px] text-slate-550 leading-relaxed font-sans">
           <div className="flex items-start gap-2 max-w-xl">
             <HelpCircle className="h-4 w-4 text-indigo-500 shrink-0 mt-0.5" />
             <p>
-              <strong>Status Guidance:</strong> Status settings default to <em>Running</em>. The <strong>Days to Free</strong> and <strong>Expected Free Dates</strong> automatically re-render dynamically as operators append knitting production rolls from the Floor Logs.
+              <strong>Status Guidance:</strong> Status settings default to <em>Running</em>. The <strong>Days to Free</strong> and <strong>Expected Free Dates</strong> automatically re-render dynamically as operators append knitting production rolls from the Production Logs.
             </p>
           </div>
           <div className="p-2 bg-indigo-50/60 border border-indigo-100 rounded-lg text-[10px] font-semibold text-slate-650 flex items-center gap-1">

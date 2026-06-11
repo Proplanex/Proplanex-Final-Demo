@@ -4,6 +4,15 @@ import { Order, DeliveryChallan, GreyDeliveryItem, YarnReturnItem } from "../typ
 import { Plus, Search, FileText, Printer, FileDown, Trash2, HelpCircle, ExternalLink } from "lucide-react";
 import { downloadTableAsExcel } from "../utils/helpers";
 
+export function formatDateDDMMYYYY(dateStr: string): string {
+  if (!dateStr) return "—";
+  const parts = dateStr.split("-");
+  if (parts.length === 3 && parts[0].length === 4) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  return dateStr;
+}
+
 interface DeliveryModuleProps {
   readOnly?: boolean;
 }
@@ -11,7 +20,7 @@ interface DeliveryModuleProps {
 export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps) {
   const { 
     orders, deliveryChallans, addDeliveryChallan, billRecords,
-    getYarnReceived, getTotalProduction, getTotalDelivery, factories, companyProfile, poweredByProfile 
+    getYarnReceived, getTotalProduction, getTotalDelivery, factories, companyProfile, poweredByProfile, deleteDeliveryChallan, canCurrentUserDeleteData 
   } = useAppState();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -130,10 +139,10 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
     // Auto generate Gatepass Challan Sequence
     let maxSeq = 0;
     deliveryChallans.forEach(ch => {
-      const num = parseInt(ch.challanNo.replace("GP-", ""), 10);
+      const num = parseInt(ch.challanNo.replace("CH-", "").replace("GP-", ""), 10);
       if (!isNaN(num) && num > maxSeq) maxSeq = num;
     });
-    const nextChallanNo = "GP-" + String(maxSeq + 1).padStart(4, "0");
+    const nextChallanNo = "CH-" + String(maxSeq + 1).padStart(4, "0");
     const today = new Date().toISOString().split("T")[0];
 
     if (challanType === "Grey Fabric Delivery") {
@@ -452,12 +461,13 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                 <th className="py-3 px-3 text-right">Outstanding (Kg)</th>
                 <th className="py-3 px-3 text-center">Audit status</th>
                 <th className="py-3 px-3 text-center">Ticket</th>
+                {canCurrentUserDeleteData() && <th className="py-3 px-3 text-center w-12">Delete</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono">
               {ledgerRows.length === 0 ? (
                 <tr className="font-sans">
-                  <td colSpan={12} className="py-12 text-center text-slate-400">
+                  <td colSpan={canCurrentUserDeleteData() ? 13 : 12} className="py-12 text-center text-slate-400">
                     No active dispatches matched input index filters.
                   </td>
                 </tr>
@@ -465,7 +475,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                 ledgerRows.map((row, idx) => {
                   return (
                     <tr key={idx} className="hover:bg-slate-50/50">
-                      <td className="py-3 px-3 text-slate-500">{row.date}</td>
+                      <td className="py-3 px-3 text-slate-500">{formatDateDDMMYYYY(row.date)}</td>
                       <td className="py-3 px-3 font-semibold text-slate-900">{row.orderNo}</td>
                       <td className="py-3 px-3 font-medium font-sans text-slate-800">{row.factoryName}</td>
                       <td className="py-3 px-3 text-slate-600">
@@ -508,6 +518,22 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                           <Printer className="h-3 w-3" /> Gatepass
                         </button>
                       </td>
+                      {canCurrentUserDeleteData() && (
+                        <td className="py-1 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete delivery challan ${row.challanNo}? This will restore the outstanding balance.`)) {
+                                deleteDeliveryChallan(row.challanNo);
+                              }
+                            }}
+                            className="text-slate-300 hover:text-red-500 hover:bg-slate-50 p-1.5 rounded transition-colors cursor-pointer inline-flex items-center"
+                            title="Delete Dispatch Record"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -810,7 +836,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                   </div>
 
                   {/* CHALLAN TITLE */}
-                  <p className="text-right text-[9px] font-mono">Date: {new Date().toISOString().split("T")[0]}</p>
+                  <p className="text-right text-[9px] font-mono">Date: {formatDateDDMMYYYY(new Date().toISOString().split("T")[0])}</p>
                   
                   {/* METADATA GRID */}
                   <div className="grid grid-cols-2 gap-2 text-[10px] border-b border-slate-100 pb-2">
@@ -927,6 +953,12 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
               <div className="flex gap-2">
                 <button
                   onClick={triggerPrintChallan}
+                  className="bg-red-650 hover:bg-red-750 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                >
+                  <FileDown className="h-4 w-4" /> Download PDF
+                </button>
+                <button
+                  onClick={triggerPrintChallan}
                   className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
                 >
                   <Printer className="h-4 w-4" /> Print Challan
@@ -947,7 +979,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                 <div className="space-y-1">
                   <p className="font-semibold text-amber-900">Browser Security Restricts Printing inside Editor Sandbox</p>
                   <p className="text-amber-700 text-[11px]">
-                    Your web browser blocks print commands nested inside secure development iframes. To print or save files as PDF perfectly, please click <strong>"Open in New Tab" / "Open"</strong> at the top-right corner of the web simulator in AI Studio, or launch via the link below:
+                    To save files as vector PDF perfectly, please click <strong>"Download PDF"</strong> and select <strong>"Save as PDF"</strong> as your printer destination. If blockages persist, open in a standalone tab:
                   </p>
                   <a 
                     href={window.location.href} 
@@ -955,7 +987,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                     rel="noopener noreferrer" 
                     className="inline-flex items-center gap-1 font-mono text-[10px] font-bold bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-2 uppercase tracking-wider cursor-pointer"
                   >
-                    Open Standalone & Print <ExternalLink className="h-3 w-3" />
+                    Open Standalone & Save PDF <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
               </div>
@@ -988,7 +1020,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                 </div>
                 <div className="space-y-1 text-right">
                   <p>Challan / Gatepass No: <strong className="text-indigo-800 font-mono text-sm">{activePrintChallan.challanNo}</strong></p>
-                  <p>Date: <strong className="text-slate-800">{activePrintChallan.date}</strong></p>
+                  <p>Date: <strong className="text-slate-800">{formatDateDDMMYYYY(activePrintChallan.date)}</strong></p>
                   <p>Truck No: <strong>{activePrintChallan.truckNo}</strong> | Driver: <strong>{activePrintChallan.driverName}</strong></p>
                 </div>
               </div>
@@ -999,34 +1031,55 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
 
               {/* TABLE CONFIGS */}
               {activePrintChallan.type === "Grey Fabric Delivery" && activePrintChallan.greyItems ? (
-                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <div className="border border-slate-950 rounded-xs overflow-hidden">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-500 font-mono">
-                        <th className="py-2.5 px-3 w-10">SL</th>
-                        <th className="py-2.5 px-3">Description of Goods</th>
-                        <th className="py-2.5 px-3 text-center">GSM / Finish</th>
-                        <th className="py-2.5 px-2 text-center">Dia x GG</th>
-                        <th className="py-2.5 px-3 text-center">Color</th>
-                        <th className="py-2.5 px-3 text-center">Roll</th>
-                        <th className="py-2.5 px-3 text-right">Weight (KG)</th>
+                      <tr className="bg-slate-50 text-slate-900 font-sans font-bold border-b-2 border-slate-950">
+                        <th className="py-2.5 px-2 w-10 text-center border-r border-slate-950" rowSpan={2}>SL</th>
+                        <th className="py-2.5 px-3 border-r border-slate-950 text-center" rowSpan={2}>Description of Good</th>
+                        <th className="py-2.5 px-2 border-r border-slate-950 text-center" rowSpan={2}>Fab. Type</th>
+                        <th className="py-1 px-1 border-r border-slate-950 text-center text-[10px]" colSpan={1}>DIAXGG</th>
+                        <th className="py-1 px-1 border-r border-slate-950 text-center text-[10px]" colSpan={1}>FGSM</th>
+                        <th className="py-2.5 px-3 border-r border-slate-950 text-center" rowSpan={2}>Color</th>
+                        <th className="py-2.5 px-2 border-r border-slate-950 text-center font-semibold" rowSpan={2}>Roll</th>
+                        <th className="py-2.5 px-2 border-r border-slate-950 text-center font-semibold" rowSpan={2}>Weight (KG)</th>
+                        <th className="py-2.5 px-3 text-center" rowSpan={2}>Remarks</th>
+                      </tr>
+                      <tr className="bg-slate-50 text-slate-900 font-sans font-bold border-b border-slate-950">
+                        <th className="py-1 px-1 border-r border-slate-950 text-center text-[9px]">F.Dia</th>
+                        <th className="py-1 px-1 border-r border-slate-950 text-center text-[9px]">S/L</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-150">
+                    <tbody className="divide-y divide-slate-950">
                       {activePrintChallan.greyItems.map((item, yidx) => {
                         const ord = orders.find(o => o.orderNo === item.orderNo);
                         return (
-                          <tr key={yidx} className="font-mono text-[11px]">
-                            <td className="py-3 px-3">{yidx + 1}</td>
-                            <td className="py-3 px-3">
-                              <span className="font-sans font-bold text-slate-800 block text-xs">Job: {ord?.factoryJobNo}</span>
-                              <span className="text-slate-500">O/No: {ord?.factoryOrder} | {ord?.fabricType}</span>
+                          <tr key={yidx} className="font-mono text-[11px] border-b border-slate-950">
+                            <td className="py-3 px-2 text-center border-r border-slate-950 font-bold font-mono align-middle">{yidx + 1}</td>
+                            <td className="py-3 px-3 border-r border-slate-950 align-top text-left font-sans text-xs">
+                              <div className="space-y-1 font-mono text-[11px] leading-relaxed text-slate-900">
+                                <div><strong>Job:</strong> {ord?.factoryJobNo || "—"}</div>
+                                <div><strong>O/No:</strong> {ord?.factoryOrder || "—"}</div>
+                                <div><strong>Y/C:</strong> {ord?.yarns?.map(y => y.yc).filter(Boolean).join(", ") || "—"}</div>
+                                <div><strong>Lot:</strong> {ord?.yarns?.map(y => y.lot).filter(Boolean).join(", ") || "—"}</div>
+                                <div><strong>Brand:</strong> {ord?.yarns?.map(y => y.spinner).filter(Boolean).join(", ") || "—"}</div>
+                              </div>
                             </td>
-                            <td className="py-3 px-3 text-center font-sans">{ord?.finishGSM} GSM / F.{ord?.finishDia}"</td>
-                            <td className="py-3 px-2 text-center whitespace-nowrap">{ord?.diaGG}</td>
-                            <td className="py-3 px-3 text-center font-sans">{ord?.color}</td>
-                            <td className="py-3 px-3 text-center font-bold text-slate-900">{item.roll}</td>
-                            <td className="py-3 px-3 text-right font-bold text-slate-950 text-xs">{item.qty.toLocaleString()} Kg</td>
+                            <td className="py-3 px-2 border-r border-slate-950 text-center align-middle font-sans">{ord?.fabricType || "—"}</td>
+                            <td className="p-0 border-r border-slate-950 text-center align-middle">
+                              <div className="py-2.5 px-1 font-semibold border-b border-slate-950">{ord?.diaGG || "—"}</div>
+                              <div className="py-2.5 px-1 text-slate-750">{ord?.finishDia ? `F.${ord.finishDia}"` : "—"}</div>
+                            </td>
+                            <td className="p-0 border-r border-slate-950 text-center align-middle">
+                              <div className="py-2.5 px-1 font-semibold border-b border-slate-950">{ord?.finishGSM || "—"}</div>
+                              <div className="py-2.5 px-1 text-slate-755">{ord?.yarns?.map(y => y.sl).filter(Boolean).join(", ") || "—"}</div>
+                            </td>
+                            <td className="py-3 px-3 border-r border-slate-950 text-center align-middle font-sans">{ord?.color || "—"}</td>
+                            <td className="py-3 px-2 border-r border-slate-950 text-center align-middle font-bold text-slate-900">{item.roll}</td>
+                            <td className="py-3 px-2 border-r border-slate-950 text-right align-middle font-bold text-slate-950 text-xs">{item.qty.toLocaleString()}</td>
+                            <td className="py-3 px-3 align-top text-left font-sans text-[10px] text-slate-500 italic max-w-[130px] break-words">
+                              {ord?.remarks || "—"}
+                            </td>
                           </tr>
                         );
                       })}
@@ -1034,33 +1087,33 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                   </table>
                 </div>
               ) : activePrintChallan.type === "Yarn Return" && activePrintChallan.yarnItems ? (
-                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <div className="border border-slate-950 rounded-xs overflow-hidden">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-500 font-mono">
-                        <th className="py-2.5 px-3 w-10">SL</th>
-                        <th className="py-2.5 px-3">Description of Goods</th>
-                        <th className="py-2.5 px-3">Yarn Count Specification</th>
-                        <th className="py-2.5 px-3">Lot No</th>
-                        <th className="py-2.5 px-3">Spinner Source</th>
-                        <th className="py-2.5 px-3 text-center">Bag Returns</th>
+                      <tr className="bg-slate-50 border-b-2 border-slate-950 text-slate-900 font-sans font-bold">
+                        <th className="py-2.5 px-3 w-10 text-center border-r border-slate-950">SL</th>
+                        <th className="py-2.5 px-3 border-r border-slate-950">Description of Goods</th>
+                        <th className="py-2.5 px-3 border-r border-slate-950">Yarn Count Specification</th>
+                        <th className="py-2.5 px-3 border-r border-slate-950">Lot No</th>
+                        <th className="py-2.5 px-3 border-r border-slate-950">Spinner Source</th>
+                        <th className="py-2.5 px-3 text-center border-r border-slate-950">Bag Returns</th>
                         <th className="py-2.5 px-3 text-right">Return Weight (KG)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-150 font-mono text-[11px]">
+                    <tbody className="divide-y divide-slate-950 font-mono text-[11px] border-b border-slate-950">
                       {activePrintChallan.yarnItems.map((item, yidx) => {
                         const ord = orders.find(o => o.orderNo === item.orderNo);
                         return (
-                          <tr key={yidx}>
-                            <td className="py-3 px-3">{yidx + 1}</td>
-                            <td className="py-3 px-3">
+                          <tr key={yidx} className="hover:bg-slate-50/20">
+                            <td className="py-3 px-3 text-center border-r border-slate-950 font-bold">{yidx + 1}</td>
+                            <td className="py-3 px-3 border-r border-slate-950">
                               <span className="font-sans font-semibold text-slate-850 block">O/No: {ord?.factoryOrder}</span>
                               <span className="text-slate-500 text-[10px]">Job: {ord?.factoryJobNo} | Fabric: {ord?.fabricType}</span>
                             </td>
-                            <td className="py-3 px-3 font-sans text-slate-800">{item.yc}</td>
-                            <td className="py-3 px-3">{item.lot}</td>
-                            <td className="py-3 px-3">{item.spinner}</td>
-                            <td className="py-3 px-3 text-center font-bold text-slate-900">{item.bag}</td>
+                            <td className="py-3 px-3 border-r border-slate-950 font-sans text-slate-800">{item.yc}</td>
+                            <td className="py-3 px-3 border-r border-slate-950">{item.lot}</td>
+                            <td className="py-3 px-3 border-r border-slate-950">{item.spinner}</td>
+                            <td className="py-3 px-3 text-center border-r border-slate-950 font-bold text-slate-900">{item.bag}</td>
                             <td className="py-3 px-3 text-right font-bold text-slate-950 text-xs">{item.qty.toLocaleString()} Kg</td>
                           </tr>
                         );
@@ -1103,36 +1156,43 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
 
               {/* Powered tagline footer */}
               {poweredByProfile && (
-                <div className="border-t border-slate-150 pt-4 flex items-center justify-between font-sans text-left mt-3">
-                  {/* Left Side */}
-                  <div className="flex items-center gap-3">
-                    {poweredByProfile.logoUrl && (
+                <div className="border-t border-slate-150 pt-3 mt-3">
+                  {/* Software Generated subtitle notice exactly layout block 2 */}
+                  <div className="text-[10px] text-slate-500 font-sans tracking-wide mb-3 uppercase font-semibold text-center italic opacity-95">
+                    This is a software generated report.
+                  </div>
+                  
+                  <div className="flex items-center justify-between font-sans text-left">
+                    {/* Left Side */}
+                    <div className="flex items-center gap-3">
+                      {poweredByProfile.logoUrl && (
+                        <img 
+                          src={poweredByProfile.logoUrl} 
+                          alt="Logo" 
+                          className="h-12 max-w-[120px] object-contain shrink-0" 
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <div className="space-y-0.5">
+                        <p className="text-[11px] font-bold text-slate-800 tracking-wide uppercase leading-tight">
+                          Powered By {poweredByProfile.name || "Proplanex Software"}
+                        </p>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-widest leading-none font-medium">
+                          {poweredByProfile.slogan || "Automated Floor Intelligence & Control Systems"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right Side */}
+                    {poweredByProfile.qrCodeUrl && (
                       <img 
-                        src={poweredByProfile.logoUrl} 
-                        alt="Logo" 
-                        className="h-12 max-w-[120px] object-contain shrink-0" 
+                        src={poweredByProfile.qrCodeUrl} 
+                        alt="QR" 
+                        className="h-16 w-16 object-contain shrink-0 border border-slate-200 bg-white rounded-lg p-1 shadow-sm"
                         referrerPolicy="no-referrer"
                       />
                     )}
-                    <div className="space-y-0.5">
-                      <p className="text-[11px] font-bold text-slate-800 tracking-wide uppercase leading-tight">
-                        Powered By {poweredByProfile.name || "Proplanex Software"}
-                      </p>
-                      <p className="text-[9px] text-slate-400 uppercase tracking-widest leading-none font-medium">
-                        {poweredByProfile.slogan || "Automated Floor Intelligence & Control Systems"}
-                      </p>
-                    </div>
                   </div>
-
-                  {/* Right Side */}
-                  {poweredByProfile.qrCodeUrl && (
-                    <img 
-                      src={poweredByProfile.qrCodeUrl} 
-                      alt="QR" 
-                      className="h-16 w-16 object-contain shrink-0 border border-slate-200 bg-white rounded-lg p-1 shadow-sm"
-                      referrerPolicy="no-referrer"
-                    />
-                  )}
                 </div>
               )}
             </div>

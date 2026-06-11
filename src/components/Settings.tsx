@@ -14,7 +14,8 @@ export default function SettingsSection({ readOnly = false }: SettingsProps) {
   const { 
     companyProfile, updateCompanyProfile,
     machines, addMachine, deleteMachine,
-    factories, addFactory, deleteFactory 
+    factories, addFactory, deleteFactory,
+    canCurrentUserDeleteData 
   } = useAppState();
 
   // Company profile states
@@ -349,7 +350,7 @@ export default function SettingsSection({ readOnly = false }: SettingsProps) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-50 pb-3">
               <div>
                 <h3 className="font-sans font-bold text-slate-800 text-sm">Machine Summary Registry</h3>
-                <p className="text-[11px] text-slate-400">Define specifications, codes, performance levels, and speeds of knitting floor machines.</p>
+                <p className="text-[11px] text-slate-400">Define specifications, codes, performance levels, and speeds of knitting machines.</p>
               </div>
               <button
                 type="button"
@@ -436,9 +437,13 @@ export default function SettingsSection({ readOnly = false }: SettingsProps) {
                         </span>
                       </div>
                       
-                      {!readOnly && (
+                      {!readOnly && canCurrentUserDeleteData() && (
                         <button
-                          onClick={() => deleteMachine(mach.machineNo)}
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete machine ${mach.machineNo}?`)) {
+                              deleteMachine(mach.machineNo);
+                            }
+                          }}
                           className="p-1 text-slate-300 hover:text-red-500 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -540,10 +545,14 @@ export default function SettingsSection({ readOnly = false }: SettingsProps) {
                           </div>
                         </td>
                         <td className="py-3 px-2 max-w-[150px] truncate" title={fac.address}>{fac.address}</td>
-                        {!readOnly && (
+                        {!readOnly && canCurrentUserDeleteData() && (
                           <td className="py-3 px-3 text-right">
                             <button
-                              onClick={() => deleteFactory(fac.name)}
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to delete factory ${fac.name}?`)) {
+                                  deleteFactory(fac.name);
+                                }
+                              }}
                               className="p-1 text-slate-300 hover:text-red-500 hover:bg-slate-50 rounded-lg cursor-pointer"
                             >
                               <Trash2 className="h-4 w-4" />

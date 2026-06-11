@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useAppState } from "../context/AppContext";
 import { Order, MachinePlan } from "../types";
-import { Search, Plus, Calendar, Settings, Printer, Scissors, HelpCircle, ChevronRight, CheckCircle, ExternalLink } from "lucide-react";
+import { Search, Plus, Calendar, Settings, Printer, Scissors, HelpCircle, ChevronRight, CheckCircle, ExternalLink, Trash2 } from "lucide-react";
+import { formatDateDDMMYYYY } from "./DeliveryModule";
 
 interface PlanningFileProps {
   readOnly?: boolean;
@@ -9,7 +10,7 @@ interface PlanningFileProps {
 
 export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
   const { 
-    orders, machinePlans, addMachinePlan, getPlannedQty, machines, companyProfile, poweredByProfile 
+    orders, machinePlans, addMachinePlan, getPlannedQty, machines, companyProfile, poweredByProfile, deleteMachinePlan, canCurrentUserDeleteData 
   } = useAppState();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -227,7 +228,7 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
 
                               {/* Machine Routing Table */}
                               <div>
-                                <p className="text-xs font-semibold text-slate-500 font-mono uppercase tracking-wider mb-2">Shop Floor Machine Assignments</p>
+                                <p className="text-xs font-semibold text-slate-500 font-mono uppercase tracking-wider mb-2">Knitting Machine Assignments</p>
                                 {orderPlans.length === 0 ? (
                                   <p className="text-xs text-slate-400 italic py-2">No machines currently scheduled on this contract.</p>
                                 ) : (
@@ -240,12 +241,13 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
                                           <th className="py-2.5 px-3 text-right">Drafted Capacity (Kg)</th>
                                           <th className="py-2.5 px-3">Job Card Reference #</th>
                                           <th className="py-2.5 px-3 text-center">Action Ticket</th>
+                                          {canCurrentUserDeleteData() && <th className="py-2.5 px-3 text-center w-12">Delete</th>}
                                         </tr>
                                       </thead>
                                       <tbody className="divide-y divide-slate-100 font-mono">
                                         {orderPlans.map((plan) => (
                                           <tr key={plan.id} className="hover:bg-slate-50/50">
-                                            <td className="py-2.5 px-3 text-slate-500">{plan.planDate}</td>
+                                            <td className="py-2.5 px-3 text-slate-500">{formatDateDDMMYYYY(plan.planDate)}</td>
                                             <td className="py-2.5 px-3 font-semibold text-slate-800">{plan.machineNo}</td>
                                             <td className="py-2.5 px-3 text-right font-semibold text-slate-950">{plan.plannedQty.toLocaleString()} Kg</td>
                                             <td className="py-2.5 px-3 font-bold text-sky-800">{plan.jobCardNo}</td>
@@ -257,6 +259,21 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
                                                 <Printer className="h-3.5 w-3.5" /> View Ticket
                                               </button>
                                             </td>
+                                            {canCurrentUserDeleteData() && (
+                                              <td className="py-2.5 px-3 text-center">
+                                                <button
+                                                  onClick={() => {
+                                                    if (window.confirm(`Are you sure you want to delete job card ${plan.jobCardNo}?`)) {
+                                                      deleteMachinePlan(plan.id);
+                                                    }
+                                                  }}
+                                                  className="text-slate-350 hover:text-red-500 p-1 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                                                  title="Delete Job Card"
+                                                >
+                                                  <Trash2 className="h-4 w-4" />
+                                                </button>
+                                              </td>
+                                            )}
                                           </tr>
                                         ))}
                                       </tbody>
@@ -538,42 +555,49 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
                   Approved By : __________________
                 </div>
                 <div className="border-t border-slate-300 pt-1.5 text-right pr-2">
-                  Draft Date: {activeJobCard.planDate}
+                  Draft Date: {formatDateDDMMYYYY(activeJobCard.planDate)}
                 </div>
               </div>
 
               {/* Branding tagline footer */}
               {poweredByProfile && (
-                <div className="border-t border-slate-200 pt-4 flex items-center justify-between font-sans text-left mt-3">
-                  {/* Left Side */}
-                  <div className="flex items-center gap-3">
-                    {poweredByProfile.logoUrl && (
+                <div className="border-t border-slate-200 pt-3 mt-3">
+                  {/* Software Generated subtitle notice exactly layout block 2 */}
+                  <div className="text-[10px] text-slate-500 font-sans tracking-wide mb-3 uppercase font-semibold text-center italic opacity-95">
+                    This is a software generated report.
+                  </div>
+                  
+                  <div className="flex items-center justify-between font-sans text-left">
+                    {/* Left Side */}
+                    <div className="flex items-center gap-3">
+                      {poweredByProfile.logoUrl && (
+                        <img 
+                          src={poweredByProfile.logoUrl} 
+                          alt="Logo" 
+                          className="h-12 max-w-[120px] object-contain shrink-0" 
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <div className="space-y-0.5">
+                        <p className="text-[11px] font-bold text-slate-800 tracking-wide uppercase leading-tight">
+                          Powered By {poweredByProfile.name || "Proplanex Software"}
+                        </p>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-widest leading-none font-medium">
+                          {poweredByProfile.slogan || "Automated Floor Intelligence & Control Systems"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right Side */}
+                    {poweredByProfile.qrCodeUrl && (
                       <img 
-                        src={poweredByProfile.logoUrl} 
-                        alt="Logo" 
-                        className="h-12 max-w-[120px] object-contain shrink-0" 
+                        src={poweredByProfile.qrCodeUrl} 
+                        alt="QR" 
+                        className="h-16 w-16 object-contain shrink-0 border border-slate-200 bg-white rounded-lg p-1 shadow-sm"
                         referrerPolicy="no-referrer"
                       />
                     )}
-                    <div className="space-y-0.5">
-                      <p className="text-[11px] font-bold text-slate-800 tracking-wide uppercase leading-tight">
-                        Powered By {poweredByProfile.name || "Proplanex Software"}
-                      </p>
-                      <p className="text-[9px] text-slate-400 uppercase tracking-widest leading-none font-medium">
-                        {poweredByProfile.slogan || "Automated Floor Intelligence & Control Systems"}
-                      </p>
-                    </div>
                   </div>
-
-                  {/* Right Side */}
-                  {poweredByProfile.qrCodeUrl && (
-                    <img 
-                      src={poweredByProfile.qrCodeUrl} 
-                      alt="QR" 
-                      className="h-16 w-16 object-contain shrink-0 border border-slate-200 bg-white rounded-lg p-1 shadow-sm"
-                      referrerPolicy="no-referrer"
-                    />
-                  )}
                 </div>
               )}
             </div>

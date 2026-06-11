@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAppState } from "../context/AppContext";
 import { YarnTransaction } from "../types";
-import { Plus, Search, ChevronDown, ChevronUp, RefreshCw, BarChart2, Calendar } from "lucide-react";
+import { Plus, Search, ChevronDown, ChevronUp, RefreshCw, BarChart2, Calendar, FileDown, Trash2 } from "lucide-react";
 
 interface YarnInventoryProps {
   readOnly?: boolean;
@@ -9,11 +9,18 @@ interface YarnInventoryProps {
 
 export default function YarnInventory({ readOnly = false }: YarnInventoryProps) {
   const { 
-    orders, yarnTransactions, addYarnTransaction, getYarnReceived 
+    orders, yarnTransactions, addYarnTransaction, getYarnReceived, factories, deleteYarnTransaction, canCurrentUserDeleteData 
   } = useAppState();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
+
+  // Search & Filter state values
+  const [searchOrderNo, setSearchOrderNo] = useState("");
+  const [searchPartyOrderNo, setSearchPartyOrderNo] = useState("");
+  const [searchPartyName, setSearchPartyName] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   // Form active states
   const [selectedOrderNo, setSelectedOrderNo] = useState("");
@@ -71,9 +78,126 @@ export default function YarnInventory({ readOnly = false }: YarnInventoryProps) 
     setShowAddModal(false);
   };
 
-  // KPI calculations
+  // Filter logic on active state
+  const filteredOrders = orders.filter(order => {
+    // Filter by Order Number (case-insensitive)
+    if (searchOrderNo && !order.orderNo.toLowerCase().includes(searchOrderNo.toLowerCase())) {
+      return false;
+    }
+    // Filter by Party Order Number (which is order.factoryOrder)
+    if (searchPartyOrderNo && !order.factoryOrder.toLowerCase().includes(searchPartyOrderNo.toLowerCase())) {
+      return false;
+    }
+    // Filter by Party Name (which maps to factory name selection)
+    if (searchPartyName && order.factoryName !== searchPartyName) {
+      return false;
+    }
+    // Filter by Date Range on corresponding yarn transactions
+    if (fromDate || toDate) {
+      const oTx = yarnTransactions.filter(tx => tx.orderNo === order.orderNo);
+      const hasMatchingTx = oTx.some(tx => {
+        if (fromDate && tx.date < fromDate) return false;
+        if (toDate && tx.date > toDate) return false;
+        return true;
+      });
+      if (!hasMatchingTx) return false;
+    }
+    return true;
+  });
+
+  // KPI calculations based on active dataset
   const totalYarnTransactionsCount = yarnTransactions.length;
-  const inHouseStockWeight = orders.reduce((sum, o) => sum + getYarnReceived(o.orderNo), 0);
+  const inHouseStockWeight = filteredOrders.reduce((sum, o) => sum + getYarnReceived(o.orderNo), 0);
+
+  // CSV Exporter mimicking requested image columns precisely
+  const handleDownloadExcel = () => {
+    const transactionsToExport = yarnTransactions.filter(tx => {
+      const order = orders.find(o => o.orderNo === tx.orderNo);
+      
+      // Apply searches
+      if (searchOrderNo && !tx.orderNo.toLowerCase().includes(searchOrderNo.toLowerCase())) {
+        return false;
+      }
+      if (searchPartyOrderNo && (!order || !order.factoryOrder.toLowerCase().includes(searchPartyOrderNo.toLowerCase()))) {
+        return false;
+      }
+      if (searchPartyName && (!order || order.factoryName !== searchPartyName)) {
+        return false;
+      }
+      if (fromDate && tx.date < fromDate) {
+        return false;
+      }
+      if (toDate && tx.date > toDate) {
+        return false;
+      }
+      return true;
+    });
+
+    // Column alignment as shown in user illustration
+    const headers = [
+      "Date",
+      "Order Number",
+      "Mode of Transaction",
+      "Factory Name",
+      "Factory Order",
+      "Fabric Type",
+      "Color",
+      "Yarn Count",
+      "Lot",
+      "Spinner",
+      "Received QTY",
+      "Return QTY",
+      "Net Received"
+    ];
+
+    const escapeCSV = (val: any) => {
+      if (val === undefined || val === null) return '""';
+      let str = String(val);
+      str = str.replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const csvRows = [headers.join(",")];
+
+    transactionsToExport.forEach(tx => {
+      const order = orders.find(o => o.orderNo === tx.orderNo);
+      
+      const receivedQty = tx.mode === "Received" ? tx.qty : "";
+      const returnedQty = tx.mode === "Returned" ? tx.qty : "";
+      const netReceivedQty = tx.mode === "Received" ? tx.qty : -tx.qty;
+
+      // Map to individual layout matching spreadsheet row format
+      const row = [
+        escapeCSV(tx.date),
+        escapeCSV(tx.orderNo),
+        escapeCSV(tx.mode === "Received" ? "Yarn Received" : "Yarn Returned"),
+        escapeCSV(order?.factoryName || "—"),
+        escapeCSV(order?.factoryOrder || "—"),
+        escapeCSV(order?.fabricType || "—"),
+        escapeCSV(order?.color || "—"),
+        escapeCSV(tx.yc),
+        escapeCSV(tx.lot),
+        escapeCSV(tx.spinner),
+        receivedQty,
+        returnedQty,
+        netReceivedQty
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    const csvContent = csvRows.join("\n");
+    // UTF-8 BOM prefix
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const today = new Date().toISOString().split("T")[0];
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Yarn_Inventory_${today}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-6">
@@ -84,7 +208,7 @@ export default function YarnInventory({ readOnly = false }: YarnInventoryProps) 
           <div>
             <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">Monitored Fabric Orders</p>
             <p className="text-2xl font-sans font-semibold text-slate-800 mt-2">
-              {orders.length} <span className="text-sm font-normal text-slate-500">Active Contracts</span>
+              {filteredOrders.length} <span className="text-sm font-normal text-slate-500">Filtered Active</span>
             </p>
           </div>
           <div className="bg-sky-50 p-3 rounded-xl text-sky-600">
@@ -106,19 +230,136 @@ export default function YarnInventory({ readOnly = false }: YarnInventoryProps) 
         </div>
       </div>
 
-      {/* FILTER & TRANSACTION TRIGGER */}
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100">
-        <h3 className="font-sans font-semibold text-slate-800 text-sm flex items-center gap-2">
-          <span>Yarn Allocation Ledgers</span>
-        </h3>
-        {!readOnly && (
-          <button
-            onClick={() => setShowAddModal(true)}
-            disabled={activeOrders.length === 0}
-            className="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-sm font-medium flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" /> Add Yarn Data
-          </button>
+      {/* FILTER workspace AND ACTIONS */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <h3 className="font-sans font-semibold text-slate-800 text-sm flex items-center gap-2">
+            <span className="p-1.5 bg-slate-50 text-slate-500 rounded-lg"><Search className="h-4 w-4" /></span>
+            <span>Search & Filter Yarn Inventory</span>
+          </h3>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={handleDownloadExcel}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors shadow-2xs"
+            >
+              <FileDown className="h-4 w-4" /> Download to Excel
+            </button>
+            {!readOnly && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                disabled={activeOrders.length === 0}
+                className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" /> Add Yarn Data
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5">
+          {/* Order Number */}
+          <div>
+            <label className="block text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Order Number
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search order no..."
+                value={searchOrderNo}
+                onChange={(e) => setSearchOrderNo(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-sky-500 focus:bg-white rounded-xl text-xs transition-colors font-mono"
+              />
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            </div>
+          </div>
+
+          {/* Party Order Number */}
+          <div>
+            <label className="block text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Party Order Number
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search party order..."
+                value={searchPartyOrderNo}
+                onChange={(e) => setSearchPartyOrderNo(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-sky-500 focus:bg-white rounded-xl text-xs transition-colors font-mono"
+              />
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            </div>
+          </div>
+
+          {/* Party Name Dropdown */}
+          <div>
+            <label className="block text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Party Name
+            </label>
+            <select
+              value={searchPartyName}
+              onChange={(e) => setSearchPartyName(e.target.value)}
+              className="w-full px-2.5 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-sky-500 focus:bg-white rounded-xl text-xs transition-colors text-slate-700 bg-white"
+            >
+              <option value="">All Parties</option>
+              {factories.map((factory) => (
+                <option key={factory.name} value={factory.name}>
+                  {factory.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* From Date */}
+          <div>
+            <label className="block text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              From Date
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-sky-500 focus:bg-white rounded-xl text-xs transition-colors text-slate-700"
+              />
+              <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            </div>
+          </div>
+
+          {/* To Date */}
+          <div>
+            <label className="block text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              To Date
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-sky-500 focus:bg-white rounded-xl text-xs transition-colors text-slate-700"
+              />
+              <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            </div>
+          </div>
+        </div>
+
+        {/* Clear Filters helper */}
+        {(searchOrderNo || searchPartyOrderNo || searchPartyName || fromDate || toDate) && (
+          <div className="flex justify-end pt-1">
+            <button
+              onClick={() => {
+                setSearchOrderNo("");
+                setSearchPartyOrderNo("");
+                setSearchPartyName("");
+                setFromDate("");
+                setToDate("");
+              }}
+              className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 p-1 px-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-100 transition-all cursor-pointer"
+            >
+              <RefreshCw className="h-3 w-3" />
+              <span>Reset Filters</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -139,17 +380,26 @@ export default function YarnInventory({ readOnly = false }: YarnInventoryProps) 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm text-slate-750">
-              {orders.length === 0 ? (
+              {filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
-                    No active yarn stocks initialized. Define orders first.
+                    {orders.length === 0
+                      ? "No active yarn stocks initialized. Define orders first."
+                      : "No active yarn stocks match your filter criteria."}
                   </td>
                 </tr>
               ) : (
-                orders.map(order => {
+                filteredOrders.map(order => {
                   const isExpanded = !!expandedOrders[order.orderNo];
                   const netReceived = getYarnReceived(order.orderNo);
                   const oTx = yarnTransactions.filter(tx => tx.orderNo === order.orderNo);
+                  
+                  // Filter expanded rows if dates are active
+                  const filteredOTx = oTx.filter(tx => {
+                    if (fromDate && tx.date < fromDate) return false;
+                    if (toDate && tx.date > toDate) return false;
+                    return true;
+                  });
 
                   return (
                     <React.Fragment key={order.orderNo}>
@@ -178,8 +428,8 @@ export default function YarnInventory({ readOnly = false }: YarnInventoryProps) 
                           <td colSpan={8} className="py-4 px-8 border-b border-slate-100">
                             <div>
                               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 font-mono">Transaction History Ledger</p>
-                              {oTx.length === 0 ? (
-                                <p className="text-xs text-slate-400 italic py-2">No yarn transactions logged for this active contract.</p>
+                              {filteredOTx.length === 0 ? (
+                                <p className="text-xs text-slate-400 italic py-2">No matching yarn transactions logged for this active contract.</p>
                               ) : (
                                 <div className="border border-slate-100 rounded-xl overflow-hidden shadow-2xs bg-white">
                                   <table className="w-full text-left text-xs border-collapse">
@@ -191,10 +441,11 @@ export default function YarnInventory({ readOnly = false }: YarnInventoryProps) 
                                         <th className="py-2.5 px-3">Lot No</th>
                                         <th className="py-2.5 px-3">Spinner</th>
                                         <th className="py-2.5 px-3 text-right">Quantity (Kg)</th>
+                                        {canCurrentUserDeleteData() && <th className="py-2.5 px-3 text-center w-12">Delete</th>}
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
-                                      {oTx.map((tx, tIdx) => (
+                                      {filteredOTx.map((tx, tIdx) => (
                                         <tr key={tx.id || tIdx} className="hover:bg-slate-50/50">
                                           <td className="py-2 px-3">{tx.date}</td>
                                           <td className="py-2 px-3 font-semibold">
@@ -208,6 +459,22 @@ export default function YarnInventory({ readOnly = false }: YarnInventoryProps) 
                                           <td className={`py-2 px-3 text-right font-semibold text-sm ${tx.mode === "Received" ? "text-emerald-700" : "text-amber-800"}`}>
                                             {tx.mode === "Received" ? "+" : "-"}{tx.qty.toLocaleString()}
                                           </td>
+                                          {canCurrentUserDeleteData() && (
+                                            <td className="py-2 px-3 text-center">
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  if (window.confirm("Are you sure you want to delete this yarn transaction record?")) {
+                                                    deleteYarnTransaction(tx.id);
+                                                  }
+                                                }}
+                                                className="text-slate-355 hover:text-red-500 p-0.5 hover:bg-slate-100 rounded transition-colors"
+                                                title="Delete Transaction"
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                              </button>
+                                            </td>
+                                          )}
                                         </tr>
                                       ))}
                                     </tbody>
