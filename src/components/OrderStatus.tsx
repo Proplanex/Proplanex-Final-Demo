@@ -11,7 +11,7 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
   const { 
     orders, addOrder, getPlannedQty, getYarnReceived, 
     getTotalProduction, getTotalDelivery, updateOrderStatus, factories,
-    machinePlans, productionLogs
+    machinePlans, productionLogs, machineStatusMap
   } = useAppState();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -388,28 +388,31 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
                                               ? Math.round(Math.min((prodForPlan / plan.plannedQty) * 100, 100)) 
                                               : 0;
 
-                                            // Determine current machine operational status
-                                            let machineStatus = "Scheduled";
-                                            let statusColor = "bg-slate-50 text-slate-600 border-slate-200";
-
-                                            if (order.status === "Hold") {
-                                              machineStatus = "On Hold";
-                                              statusColor = "bg-amber-50 text-amber-700 border-amber-200";
-                                            } else if (order.status === "Complete" || prodForPlan >= plan.plannedQty) {
-                                              machineStatus = "Finished";
-                                              statusColor = "bg-emerald-50 text-emerald-700 border-emerald-200 font-medium";
-                                            } else if (prodForPlan > 0) {
-                                              machineStatus = "Running";
-                                              statusColor = "bg-sky-50 text-sky-700 border-sky-200 font-medium";
+                                            // Live machine status from Machine Load module
+                                            const machineStatus = machineStatusMap?.[plan.machineNo] || "Running";
+                                            
+                                            // Determine current physical machine status color matching MachineLoad
+                                            let statusColor = "bg-slate-50 text-slate-650 border-slate-150";
+                                            if (machineStatus === "Running") {
+                                              statusColor = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                                            } else if (machineStatus === "Servicing") {
+                                              statusColor = "bg-rose-50 text-rose-800 border-rose-150";
+                                            } else if (machineStatus === "No Order") {
+                                              statusColor = "bg-slate-100 text-slate-700 border-slate-200";
                                             } else {
-                                              machineStatus = "Scheduled";
-                                              statusColor = "bg-blue-50 text-blue-700 border-blue-150";
+                                              // Hold states
+                                              statusColor = "bg-amber-50 text-amber-800 border-amber-200";
                                             }
 
                                             return (
                                               <tr key={plan.id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="py-3 px-4 font-mono font-bold text-slate-800 flex items-center gap-1.5">
-                                                  <span className={`w-1.5 h-1.5 rounded-full ${machineStatus === 'Running' ? 'bg-sky-500 animate-pulse' : machineStatus === 'Finished' ? 'bg-emerald-500' : machineStatus === 'On Hold' ? 'bg-amber-500' : 'bg-slate-400'}`}></span>
+                                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                                    machineStatus === 'Running' ? 'bg-emerald-500 animate-pulse' : 
+                                                    machineStatus === 'Servicing' ? 'bg-rose-500 animate-pulse' : 
+                                                    machineStatus === 'No Order' ? 'bg-slate-400' : 
+                                                    'bg-amber-500'
+                                                  }`}></span>
                                                   {plan.machineNo}
                                                 </td>
                                                 <td className="py-3 px-4 font-mono text-slate-600">{plan.jobCardNo}</td>
