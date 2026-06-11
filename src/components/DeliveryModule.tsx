@@ -1103,22 +1103,22 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
 
               {/* Powered tagline footer */}
               {poweredByProfile && (
-                <div className="border-t border-slate-150 pt-3.5 flex items-center justify-between font-sans text-left mt-3">
+                <div className="border-t border-slate-150 pt-4 flex items-center justify-between font-sans text-left mt-3">
                   {/* Left Side */}
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-3">
                     {poweredByProfile.logoUrl && (
                       <img 
                         src={poweredByProfile.logoUrl} 
                         alt="Logo" 
-                        className="h-8 max-w-[80px] object-contain shrink-0" 
+                        className="h-12 max-w-[120px] object-contain shrink-0" 
                         referrerPolicy="no-referrer"
                       />
                     )}
                     <div className="space-y-0.5">
-                      <p className="text-[10px] font-bold text-slate-800 tracking-wide uppercase leading-none">
+                      <p className="text-[11px] font-bold text-slate-800 tracking-wide uppercase leading-tight">
                         Powered By {poweredByProfile.name || "Proplanex Software"}
                       </p>
-                      <p className="text-[8px] text-slate-400 uppercase tracking-widest leading-none font-medium">
+                      <p className="text-[9px] text-slate-400 uppercase tracking-widest leading-none font-medium">
                         {poweredByProfile.slogan || "Automated Floor Intelligence & Control Systems"}
                       </p>
                     </div>
@@ -1129,7 +1129,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                     <img 
                       src={poweredByProfile.qrCodeUrl} 
                       alt="QR" 
-                      className="h-9 w-9 object-contain shrink-0 border border-slate-100 rounded p-0.5"
+                      className="h-16 w-16 object-contain shrink-0 border border-slate-200 bg-white rounded-lg p-1 shadow-sm"
                       referrerPolicy="no-referrer"
                     />
                   )}
