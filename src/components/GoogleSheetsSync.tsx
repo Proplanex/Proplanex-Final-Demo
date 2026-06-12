@@ -908,11 +908,51 @@ export default function GoogleSheetsSync() {
       {errorMsg && (
         <div className="p-4 bg-red-50 border border-red-150 rounded-xl flex gap-2.5 animate-fadeIn text-red-900">
           <AlertCircle className="h-5 w-5 text-red-650 shrink-0 mt-0.5" />
-          <div className="space-y-1">
+          <div className="space-y-1.5 w-full">
             <h4 className="font-bold text-sm">Synchronizing Failure</h4>
-            <p className="text-xs text-red-750 font-medium leading-relaxed">
-              {errorMsg}
-            </p>
+            {errorMsg.includes("unauthorized-domain") ? (
+              <div className="space-y-3 text-xs text-red-800">
+                <p className="font-semibold leading-relaxed">
+                  Firebase Authentication has restricted Google Sign-In because this environment's preview domain is not in your authorized list.
+                </p>
+                <div className="bg-white/80 rounded-lg p-3 border border-red-100/60 text-slate-800 space-y-2">
+                  <p className="font-bold text-[11px] text-slate-900">Follow these simple steps to solve this:</p>
+                  <ol className="list-decimal pl-4.5 space-y-1 text-[11px] font-medium text-slate-600">
+                    <li>
+                      Copy this active host:{" "}
+                      <code className="bg-slate-100 border border-slate-205 px-1.5 py-0.5 rounded font-mono text-xs select-all text-indigo-700 font-bold">
+                        {window.location.hostname}
+                      </code>
+                    </li>
+                    <li>
+                      Go to your{" "}
+                      <a
+                        href="https://console.firebase.google.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 underline font-bold hover:text-indigo-800 inline-flex items-center gap-0.5"
+                      >
+                        Firebase Console <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </li>
+                    <li>
+                      Navigate to <strong>Authentication &gt; Settings &gt; Authorized domains</strong>.
+                    </li>
+                    <li>
+                      Click <strong>Add domain</strong>, paste the copied host <kbd className="font-mono bg-slate-100 px-1 border rounded text-[10px] text-slate-700">{window.location.hostname}</kbd>, and click save.
+                    </li>
+                  </ol>
+                  <div className="text-[10px] pt-1.5 text-slate-500 font-medium italic border-t border-slate-100 mt-1.5 flex items-start gap-1">
+                    <Info className="h-3.5 w-3.5 text-indigo-500 shrink-0 mt-0.5" />
+                    <span><strong>No Setup Required Option:</strong> Alternatively, click the <strong>Shared PC Mode</strong> tab above. It uses a Google Spreadsheet Web App URL to push data instantly for all users securely without needing any login or settings configuration!</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-red-750 font-medium leading-relaxed">
+                {errorMsg}
+              </p>
+            )}
           </div>
         </div>
       )}
