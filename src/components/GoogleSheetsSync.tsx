@@ -19,13 +19,16 @@ export default function GoogleSheetsSync() {
   const [syncHistory, setSyncHistory] = useState<Array<{ spreadsheetId: string; spreadsheetUrl: string; title: string; timestamp: string }>>([]);
 
   // Self-Managed Custom Client ID configuration states
-  const [customClientId, setCustomClientId] = useState<string>(() => {
-    return localStorage.getItem("proplaex_google_client_id") || "";
-  });
-  const [isSavedClient, setIsSavedClient] = useState<boolean>(() => {
-    return !!localStorage.getItem("proplaex_google_client_id");
-  });
+  const [customClientId, setCustomClientId] = useState<string>("");
+  const isSavedClient = !!state.googleClientId;
   const [showConfigPanel, setShowConfigPanel] = useState<boolean>(false);
+
+  // Sync custom client ID local state with cloud state
+  useEffect(() => {
+    if (state.googleClientId) {
+      setCustomClientId(state.googleClientId);
+    }
+  }, [state.googleClientId]);
 
   // Load from localStorage on mount and initialize Firebase or Custom OAuth state
   useEffect(() => {
@@ -111,7 +114,7 @@ export default function GoogleSheetsSync() {
     setSyncResult(null);
 
     // If Custom Google OAuth Client ID is registered, trigger the standard Client-Side OAuth redirect flow
-    const savedClientId = localStorage.getItem("proplaex_google_client_id")?.trim();
+    const savedClientId = state.googleClientId?.trim();
     if (savedClientId) {
       try {
         setIsSyncing(true);
@@ -180,18 +183,16 @@ export default function GoogleSheetsSync() {
       return;
     }
 
-    localStorage.setItem("proplaex_google_client_id", id);
-    setIsSavedClient(true);
+    state.updateGoogleClientId(id);
     alert("Successfully configured Master Client ID! You can now log in safely using your private Google API Access channel.");
   };
 
   const handleClearClientId = () => {
     if (window.confirm("Revert connection to defaults? This will erase your custom Client ID and disconnect any current active Google Sheets session.")) {
-      localStorage.removeItem("proplaex_google_client_id");
+      state.updateGoogleClientId("");
       localStorage.removeItem("proplaex_google_oauth_token");
       localStorage.removeItem("proplaex_google_oauth_user");
       setCustomClientId("");
-      setIsSavedClient(false);
       setCurrentUser(null);
       setAccessToken(null);
       setSyncResult(null);

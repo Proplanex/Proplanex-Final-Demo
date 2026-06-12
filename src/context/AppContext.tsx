@@ -84,6 +84,10 @@ interface AppContextType {
   updateSheetsWebhookUrl: (url: string) => void;
   autoSyncStatus: "idle" | "syncing" | "success" | "error";
   lastAutoSyncTime: string | null;
+
+  // Persistent Google OAuth Client ID for live custom domains (Vercel)
+  googleClientId: string;
+  updateGoogleClientId: (clientId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -132,6 +136,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return localStorage.getItem("proplaex_sheets_webhook_url") || "";
   });
 
+  const [googleClientId, setGoogleClientId] = useState<string>(() => {
+    return localStorage.getItem("proplaex_google_client_id") || "";
+  });
+
   const [isCloudLoaded, setIsCloudLoaded] = useState<boolean>(false);
 
   // Initial Central Cloud load of configurations and database lists
@@ -156,6 +164,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const sWebhook = await loadSharedSetting<{ webhookUrl: string } | null>("sheetsConfig", null);
         if (sWebhook) {
           setSheetsWebhookUrl(sWebhook.webhookUrl);
+        }
+
+        const gClientId = await loadSharedSetting<{ clientId: string } | null>("googleClientIdConfig", null);
+        if (gClientId) {
+          setGoogleClientId(gClientId.clientId);
+          localStorage.setItem("proplaex_google_client_id", gClientId.clientId);
         }
 
         // 2. Load core entity registries
@@ -412,6 +426,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!isCloudLoaded) return;
     saveSharedSetting("sheetsConfig", { webhookUrl: sheetsWebhookUrl });
   }, [sheetsWebhookUrl, isCloudLoaded]);
+
+  useEffect(() => {
+    if (googleClientId) {
+      localStorage.setItem("proplaex_google_client_id", googleClientId);
+    } else {
+      localStorage.removeItem("proplaex_google_client_id");
+    }
+    if (!isCloudLoaded) return;
+    saveSharedSetting("googleClientIdConfig", { clientId: googleClientId });
+  }, [googleClientId, isCloudLoaded]);
 
   const [autoSyncStatus, setAutoSyncStatus] = useState<"idle" | "syncing" | "success" | "error">("idle");
   const [lastAutoSyncTime, setLastAutoSyncTime] = useState<string | null>(null);
@@ -965,7 +989,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sheetsWebhookUrl,
       updateSheetsWebhookUrl: setSheetsWebhookUrl,
       autoSyncStatus,
-      lastAutoSyncTime
+      lastAutoSyncTime,
+      googleClientId,
+      updateGoogleClientId: setGoogleClientId
     }}>
       {children}
     </AppContext.Provider>
