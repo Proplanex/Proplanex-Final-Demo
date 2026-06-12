@@ -8,6 +8,13 @@ import {
   defaultCompanyProfile, defaultPoweredByProfile, defaultMachines, defaultFactories, 
   defaultOrders, defaultYarnTransactions 
 } from "../utils/helpers";
+import {
+  validateFirestoreConnection,
+  saveSharedSetting,
+  loadSharedSetting,
+  fetchCollection,
+  saveBatchCollection
+} from "../utils/firebaseFirestoreService";
 
 interface AppContextType {
   orders: Order[];
@@ -71,6 +78,12 @@ interface AppContextType {
 
   // General Deletion Authority check
   canCurrentUserDeleteData: () => boolean;
+
+  // Stored Centralized Google Sheets Webhook Configuration
+  sheetsWebhookUrl: string;
+  updateSheetsWebhookUrl: (url: string) => void;
+  autoSyncStatus: "idle" | "syncing" | "success" | "error";
+  lastAutoSyncTime: string | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -114,6 +127,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [isExpired, setIsExpired] = useState<boolean>(false);
+
+  const [sheetsWebhookUrl, setSheetsWebhookUrl] = useState<string>(() => {
+    return localStorage.getItem("proplaex_sheets_webhook_url") || "";
+  });
+
+  const [isCloudLoaded, setIsCloudLoaded] = useState<boolean>(false);
+
+  // Initial Central Cloud load of configurations and database lists
+  useEffect(() => {
+    async function initCloudAndSync() {
+      try {
+        await validateFirestoreConnection();
+
+        // 1. Load configuration templates
+        const cProfile = await loadSharedSetting<CompanyProfile | null>("companyProfile", null);
+        if (cProfile) setCompanyProfile(cProfile);
+
+        const pProfile = await loadSharedSetting<PoweredByProfile | null>("poweredByProfile", null);
+        if (pProfile) setPoweredByProfile(pProfile);
+
+        const tConfig = await loadSharedSetting<{ trialDays: string; trialExpirationDate: string | null } | null>("trialConfig", null);
+        if (tConfig) {
+          setTrialDays(tConfig.trialDays);
+          setTrialExpirationDate(tConfig.trialExpirationDate);
+        }
+
+        const sWebhook = await loadSharedSetting<{ webhookUrl: string } | null>("sheetsConfig", null);
+        if (sWebhook) {
+          setSheetsWebhookUrl(sWebhook.webhookUrl);
+        }
+
+        // 2. Load core entity registries
+        const cloudOrders = await fetchCollection<Order>("orders");
+        if (cloudOrders.length > 0) setOrders(cloudOrders);
+
+        const cloudYarn = await fetchCollection<YarnTransaction>("yarnTransactions");
+        if (cloudYarn.length > 0) setYarnTransactions(cloudYarn);
+
+        const cloudPlans = await fetchCollection<MachinePlan>("machinePlans");
+        if (cloudPlans.length > 0) setMachinePlans(cloudPlans);
+
+        const cloudLogs = await fetchCollection<ProductionLog>("productionLogs");
+        if (cloudLogs.length > 0) setProductionLogs(cloudLogs);
+
+        const cloudChallans = await fetchCollection<DeliveryChallan>("deliveryChallans");
+        if (cloudChallans.length > 0) setDeliveryChallans(cloudChallans);
+
+        const cloudBills = await fetchCollection<BillRecord>("billRecords");
+        if (cloudBills.length > 0) setBillRecords(cloudBills);
+
+        const cloudMachines = await fetchCollection<MachineConfig>("machines");
+        if (cloudMachines.length > 0) setMachines(cloudMachines);
+
+        const cloudFactories = await fetchCollection<RunningFactory>("factories");
+        if (cloudFactories.length > 0) setFactories(cloudFactories);
+
+        const cloudUsers = await fetchCollection<AppUser>("users");
+        if (cloudUsers.length > 0) setUsers(cloudUsers);
+
+        const cloudStatuses = await fetchCollection<{ id: string; status: string }>("machineStatuses");
+        if (cloudStatuses.length > 0) {
+          const statusMap: Record<string, string> = {};
+          cloudStatuses.forEach(s => {
+            statusMap[s.id] = s.status;
+          });
+          setMachineStatusMap(statusMap);
+        }
+
+        setIsCloudLoaded(true);
+        console.log("Central cloud data sync has connected successfully.");
+      } catch (error) {
+        console.error("Central cloud setup failed:", error);
+      }
+    }
+    initCloudAndSync();
+  }, []);
 
   // Read state from LocalStorage or seed with defaults
   const [orders, setOrders] = useState<Order[]>(() => {
@@ -241,6 +330,147 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem("pro_current_user");
     }
   }, [currentUser]);
+
+  // Sync to Centralized Cloud Firestore gated by loaded status
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    saveBatchCollection("orders", orders, "orderNo");
+  }, [orders, isCloudLoaded]);
+
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    saveBatchCollection("yarnTransactions", yarnTransactions, "id");
+  }, [yarnTransactions, isCloudLoaded]);
+
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    saveBatchCollection("machinePlans", machinePlans, "id");
+  }, [machinePlans, isCloudLoaded]);
+
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    saveBatchCollection("productionLogs", productionLogs, "id");
+  }, [productionLogs, isCloudLoaded]);
+
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    saveBatchCollection("deliveryChallans", deliveryChallans, "challanNo");
+  }, [deliveryChallans, isCloudLoaded]);
+
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    saveBatchCollection("billRecords", billRecords, "id");
+  }, [billRecords, isCloudLoaded]);
+
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    saveSharedSetting("companyProfile", companyProfile);
+  }, [companyProfile, isCloudLoaded]);
+
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    saveSharedSetting("poweredByProfile", poweredByProfile);
+  }, [poweredByProfile, isCloudLoaded]);
+
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    saveBatchCollection("machines", machines, "machineNo");
+  }, [machines, isCloudLoaded]);
+
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    saveBatchCollection("factories", factories, "name");
+  }, [factories, isCloudLoaded]);
+
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    const statusList = Object.entries(machineStatusMap).map(([mNo, status]) => ({ id: mNo, status }));
+    saveBatchCollection("machineStatuses", statusList, "id");
+  }, [machineStatusMap, isCloudLoaded]);
+
+  useEffect(() => {
+    if (!isCloudLoaded) return;
+    saveBatchCollection("users", users, "userId");
+  }, [users, isCloudLoaded]);
+
+  useEffect(() => {
+    localStorage.setItem("pro_trial_days", trialDays);
+    if (!isCloudLoaded) return;
+    saveSharedSetting("trialConfig", { trialDays, trialExpirationDate });
+  }, [trialDays, trialExpirationDate, isCloudLoaded]);
+
+  useEffect(() => {
+    if (trialExpirationDate) {
+      localStorage.setItem("pro_trial_expiration", trialExpirationDate);
+    } else {
+      localStorage.removeItem("pro_trial_expiration");
+    }
+  }, [trialExpirationDate]);
+
+  useEffect(() => {
+    localStorage.setItem("proplaex_sheets_webhook_url", sheetsWebhookUrl);
+    if (!isCloudLoaded) return;
+    saveSharedSetting("sheetsConfig", { webhookUrl: sheetsWebhookUrl });
+  }, [sheetsWebhookUrl, isCloudLoaded]);
+
+  const [autoSyncStatus, setAutoSyncStatus] = useState<"idle" | "syncing" | "success" | "error">("idle");
+  const [lastAutoSyncTime, setLastAutoSyncTime] = useState<string | null>(null);
+
+  // Debounced auto-sync effect to Google Sheets
+  useEffect(() => {
+    if (!isCloudLoaded || !sheetsWebhookUrl || !sheetsWebhookUrl.startsWith("https://script.google.com/")) {
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      setAutoSyncStatus("syncing");
+      try {
+        const syncParams = {
+          orders,
+          yarnTransactions,
+          machinePlans,
+          productionLogs,
+          deliveryChallans,
+          billRecords,
+          machines,
+          factories,
+          machineStatusMap,
+          users,
+        };
+
+        const response = await fetch(sheetsWebhookUrl, {
+          method: "POST",
+          mode: "cors",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8",
+          },
+          body: JSON.stringify(syncParams)
+        });
+
+        if (response.ok) {
+          const rawResult = await response.json();
+          if (rawResult.status !== "error") {
+            setAutoSyncStatus("success");
+            setLastAutoSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            console.log("Automated Google Sheets background sync complete.");
+          } else {
+            setAutoSyncStatus("error");
+          }
+        } else {
+          setAutoSyncStatus("error");
+        }
+      } catch (err) {
+        console.error("Automated Sheets background sync failed:", err);
+        setAutoSyncStatus("error");
+      }
+    }, 4500); // 4.5 seconds of quiet time debounce
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [
+    orders, yarnTransactions, machinePlans, productionLogs, 
+    deliveryChallans, billRecords, machines, factories, 
+    machineStatusMap, users, sheetsWebhookUrl, isCloudLoaded
+  ]);
 
   useEffect(() => {
     if (trialDays === "No Limit" || !trialExpirationDate) {
@@ -730,7 +960,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       machineStatusMap,
       updateMachineStatus,
-      canCurrentUserDeleteData
+      canCurrentUserDeleteData,
+
+      sheetsWebhookUrl,
+      updateSheetsWebhookUrl: setSheetsWebhookUrl,
+      autoSyncStatus,
+      lastAutoSyncTime
     }}>
       {children}
     </AppContext.Provider>

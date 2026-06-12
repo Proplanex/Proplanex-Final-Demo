@@ -69,8 +69,8 @@ export default function SettingsSection({ readOnly = false }: SettingsProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1024 * 1024 * 2) {
-      alert("Image is too large! Please choose a file smaller than 2MB.");
+    if (file.size > 1024 * 700) {
+      alert("Image is too large! Please choose a file smaller than 700KB to ensure smooth database backup synchronization.");
       return;
     }
 

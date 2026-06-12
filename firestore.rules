@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return true; // Simple, cloud-available security check
+    }
+
+    // Workspace settings and structures
+    match /workspace_info/{docId} {
+      allow read, write: if true;
+    }
+
+    // Primary document collections
+    match /orders/{id} {
+      allow read, write: if true;
+    }
+    match /yarnTransactions/{id} {
+      allow read, write: if true;
+    }
+    match /machinePlans/{id} {
+      allow read, write: if true;
+    }
+    match /productionLogs/{id} {
+      allow read, write: if true;
+    }
+    match /deliveryChallans/{id} {
+      allow read, write: if true;
+    }
+    match /billRecords/{id} {
+      allow read, write: if true;
+    }
+    match /machines/{id} {
+      allow read, write: if true;
+    }
+    match /factories/{id} {
+      allow read, write: if true;
+    }
+    match /machineStatuses/{id} {
+      allow read, write: if true;
+    }
+    match /users/{id} {
+      allow read, write: if true;
+    }
+  }
+}

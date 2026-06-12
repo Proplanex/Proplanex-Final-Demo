@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "CompanyProfile": {
+      "title": "CompanyProfile",
+      "description": "Company registration branding profile",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "companyAddress": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "contact": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    },
+    "PoweredByProfile": {
+      "title": "PoweredByProfile",
+      "description": "Software developer licensing profile",
+      "type": "object",
+      "properties": {
+        "developerName": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "licensingCode": { "type": "string" }
+      }
+    },
+    "TrialConfig": {
+      "title": "TrialConfig",
+      "description": "Restricted subscription times configuration",
+      "type": "object",
+      "properties": {
+        "trialDays": { "type": "string" },
+        "trialExpirationDate": { "type": "string" }
+      }
+    },
+    "SheetsConfig": {
+      "title": "SheetsConfig",
+      "description": "Google Sheets synchronizer webhook",
+      "type": "object",
+      "properties": {
+        "webhookUrl": { "type": "string" }
+      }
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Order database entry",
+      "type": "object",
+      "properties": {
+        "orderNo": { "type": "string" },
+        "receiveDate": { "type": "string" },
+        "factoryName": { "type": "string" },
+        "requiredQty": { "type": "number" },
+        "status": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/workspace_info/companyProfile": {
+      "schema": "CompanyProfile",
+      "description": "Branding logo and details"
+    },
+    "/workspace_info/poweredByProfile": {
+      "schema": "PoweredByProfile",
+      "description": "Licensing configuration"
+    },
+    "/workspace_info/trialConfig": {
+      "schema": "TrialConfig",
+      "description": "License expiration check"
+    },
+    "/workspace_info/sheetsConfig": {
+      "schema": "SheetsConfig",
+      "description": "Persistent shared Google sheet webhook"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Order records list"
+    }
+  }
+}

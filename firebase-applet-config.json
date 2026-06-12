@@ -3,6 +3,7 @@
   "appId": "1:132052404551:web:02f626659c55b50a3ee462",
   "apiKey": "AIzaSyDOuwUdnolye8Elagl9ZMoGPrdqcZ0_pcw",
   "authDomain": "yarling-tributary-npwwt.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-217663a1-6d18-4e57-8b8e-16475a1b7911",
   "storageBucket": "yarling-tributary-npwwt.firebasestorage.app",
   "messagingSenderId": "132052404551",
   "measurementId": ""

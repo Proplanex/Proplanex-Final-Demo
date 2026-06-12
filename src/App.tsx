@@ -22,7 +22,8 @@ import {
 
 function AppContent() {
   const { 
-    currentUser, logoutUser, isExpired, trialDays, trialExpirationDate, companyProfile, factories 
+    currentUser, logoutUser, isExpired, trialDays, trialExpirationDate, companyProfile, factories,
+    sheetsWebhookUrl, autoSyncStatus, lastAutoSyncTime
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState<string>("orders");
@@ -147,6 +148,43 @@ function AppContent() {
               <p className="text-[8px] text-slate-400 italic max-w-[140px] truncate">{companyProfile.tagline}</p>
             </div>
           </div>
+
+          {/* GOOGLE SHEETS ACTIVE SYNCHRONIZER BADGE */}
+          {sheetsWebhookUrl && (
+            <div className="p-2 mr-1 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2.5">
+              <div className="relative flex h-2 w-2 ml-1">
+                {autoSyncStatus === "syncing" ? (
+                  <>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+                  </>
+                ) : autoSyncStatus === "success" ? (
+                  <>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </>
+                ) : autoSyncStatus === "error" ? (
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                ) : (
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500/80"></span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[9px] text-emerald-400 font-bold leading-tight font-mono tracking-wide uppercase">
+                  {autoSyncStatus === "syncing" ? "Syncing Sheets..." : "Sheets Backed Up"}
+                </p>
+                <p className="text-[7.5px] text-slate-500 leading-none mt-0.5 truncate font-mono">
+                  {autoSyncStatus === "syncing" 
+                    ? "Updating master tables..." 
+                    : autoSyncStatus === "error" 
+                    ? "Connection check failed" 
+                    : lastAutoSyncTime 
+                    ? `Done at ${lastAutoSyncTime}` 
+                    : "Connected (Automatic)"}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Navigation Items list */}
