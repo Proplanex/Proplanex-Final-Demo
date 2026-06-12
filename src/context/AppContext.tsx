@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { 
   Order, YarnTransaction, MachinePlan, ProductionLog, 
   DeliveryChallan, BillRecord, CompanyProfile, PoweredByProfile, MachineConfig, RunningFactory,
@@ -88,6 +88,7 @@ interface AppContextType {
   // Persistent Google OAuth Client ID for live custom domains (Vercel)
   googleClientId: string;
   updateGoogleClientId: (clientId: string) => void;
+  isQuotaExceeded: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -141,6 +142,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [isCloudLoaded, setIsCloudLoaded] = useState<boolean>(false);
+  const [isQuotaExceeded, setIsQuotaExceeded] = useState<boolean>(false);
+
+  // Tracks the serialized string representation of the last known state loaded or saved to cloud Firestore
+  const lastCloudSyncedRef = useRef<Record<string, string>>({
+    orders: "",
+    yarnTransactions: "",
+    machinePlans: "",
+    productionLogs: "",
+    deliveryChallans: "",
+    billRecords: "",
+    companyProfile: "",
+    poweredByProfile: "",
+    machines: "",
+    factories: "",
+    machineStatuses: "",
+    users: "",
+    trialConfig: "",
+    sheetsConfig: "",
+    googleClientIdConfig: ""
+  });
 
   // Initial Central Cloud load of configurations and database lists
   useEffect(() => {
@@ -150,55 +171,91 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         // 1. Load configuration templates
         const cProfile = await loadSharedSetting<CompanyProfile | null>("companyProfile", null);
-        if (cProfile) setCompanyProfile(cProfile);
+        if (cProfile) {
+          setCompanyProfile(cProfile);
+          lastCloudSyncedRef.current.companyProfile = JSON.stringify(cProfile);
+        }
 
         const pProfile = await loadSharedSetting<PoweredByProfile | null>("poweredByProfile", null);
-        if (pProfile) setPoweredByProfile(pProfile);
+        if (pProfile) {
+          setPoweredByProfile(pProfile);
+          lastCloudSyncedRef.current.poweredByProfile = JSON.stringify(pProfile);
+        }
 
         const tConfig = await loadSharedSetting<{ trialDays: string; trialExpirationDate: string | null } | null>("trialConfig", null);
         if (tConfig) {
           setTrialDays(tConfig.trialDays);
           setTrialExpirationDate(tConfig.trialExpirationDate);
+          lastCloudSyncedRef.current.trialConfig = JSON.stringify({ trialDays: tConfig.trialDays, trialExpirationDate: tConfig.trialExpirationDate });
         }
 
         const sWebhook = await loadSharedSetting<{ webhookUrl: string } | null>("sheetsConfig", null);
         if (sWebhook) {
           setSheetsWebhookUrl(sWebhook.webhookUrl);
+          lastCloudSyncedRef.current.sheetsConfig = JSON.stringify({ webhookUrl: sWebhook.webhookUrl });
         }
 
         const gClientId = await loadSharedSetting<{ clientId: string } | null>("googleClientIdConfig", null);
         if (gClientId) {
           setGoogleClientId(gClientId.clientId);
           localStorage.setItem("proplaex_google_client_id", gClientId.clientId);
+          lastCloudSyncedRef.current.googleClientIdConfig = JSON.stringify({ clientId: gClientId.clientId });
         }
 
         // 2. Load core entity registries
         const cloudOrders = await fetchCollection<Order>("orders");
-        if (cloudOrders.length > 0) setOrders(cloudOrders);
+        if (cloudOrders.length > 0) {
+          setOrders(cloudOrders);
+          lastCloudSyncedRef.current.orders = JSON.stringify(cloudOrders);
+        }
 
         const cloudYarn = await fetchCollection<YarnTransaction>("yarnTransactions");
-        if (cloudYarn.length > 0) setYarnTransactions(cloudYarn);
+        if (cloudYarn.length > 0) {
+          setYarnTransactions(cloudYarn);
+          lastCloudSyncedRef.current.yarnTransactions = JSON.stringify(cloudYarn);
+        }
 
         const cloudPlans = await fetchCollection<MachinePlan>("machinePlans");
-        if (cloudPlans.length > 0) setMachinePlans(cloudPlans);
+        if (cloudPlans.length > 0) {
+          setMachinePlans(cloudPlans);
+          lastCloudSyncedRef.current.machinePlans = JSON.stringify(cloudPlans);
+        }
 
         const cloudLogs = await fetchCollection<ProductionLog>("productionLogs");
-        if (cloudLogs.length > 0) setProductionLogs(cloudLogs);
+        if (cloudLogs.length > 0) {
+          setProductionLogs(cloudLogs);
+          lastCloudSyncedRef.current.productionLogs = JSON.stringify(cloudLogs);
+        }
 
         const cloudChallans = await fetchCollection<DeliveryChallan>("deliveryChallans");
-        if (cloudChallans.length > 0) setDeliveryChallans(cloudChallans);
+        if (cloudChallans.length > 0) {
+          setDeliveryChallans(cloudChallans);
+          lastCloudSyncedRef.current.deliveryChallans = JSON.stringify(cloudChallans);
+        }
 
         const cloudBills = await fetchCollection<BillRecord>("billRecords");
-        if (cloudBills.length > 0) setBillRecords(cloudBills);
+        if (cloudBills.length > 0) {
+          setBillRecords(cloudBills);
+          lastCloudSyncedRef.current.billRecords = JSON.stringify(cloudBills);
+        }
 
         const cloudMachines = await fetchCollection<MachineConfig>("machines");
-        if (cloudMachines.length > 0) setMachines(cloudMachines);
+        if (cloudMachines.length > 0) {
+          setMachines(cloudMachines);
+          lastCloudSyncedRef.current.machines = JSON.stringify(cloudMachines);
+        }
 
         const cloudFactories = await fetchCollection<RunningFactory>("factories");
-        if (cloudFactories.length > 0) setFactories(cloudFactories);
+        if (cloudFactories.length > 0) {
+          setFactories(cloudFactories);
+          lastCloudSyncedRef.current.factories = JSON.stringify(cloudFactories);
+        }
 
         const cloudUsers = await fetchCollection<AppUser>("users");
-        if (cloudUsers.length > 0) setUsers(cloudUsers);
+        if (cloudUsers.length > 0) {
+          setUsers(cloudUsers);
+          lastCloudSyncedRef.current.users = JSON.stringify(cloudUsers);
+        }
 
         const cloudStatuses = await fetchCollection<{ id: string; status: string }>("machineStatuses");
         if (cloudStatuses.length > 0) {
@@ -207,12 +264,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             statusMap[s.id] = s.status;
           });
           setMachineStatusMap(statusMap);
+          const statusList = Object.entries(statusMap).map(([mNo, status]) => ({ id: mNo, status }));
+          lastCloudSyncedRef.current.machineStatuses = JSON.stringify(statusList);
         }
 
         setIsCloudLoaded(true);
         console.log("Central cloud data sync has connected successfully.");
       } catch (error) {
         console.error("Central cloud setup failed:", error);
+        if (error instanceof Error && (error.message.includes("quota") || error.message.includes("resource-exhausted"))) {
+          setIsQuotaExceeded(true);
+        }
       }
     }
     initCloudAndSync();
@@ -345,73 +407,230 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
-  // Sync to Centralized Cloud Firestore gated by loaded status
+  // Sync to Centralized Cloud Firestore gated by loaded status & local modifications
   useEffect(() => {
-    if (!isCloudLoaded) return;
-    saveBatchCollection("orders", orders, "orderNo");
-  }, [orders, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const serialized = JSON.stringify(orders);
+    if (serialized === lastCloudSyncedRef.current.orders) return;
+
+    saveBatchCollection("orders", orders, "orderNo")
+      .then(() => {
+        lastCloudSyncedRef.current.orders = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync partition orders failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [orders, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
-    if (!isCloudLoaded) return;
-    saveBatchCollection("yarnTransactions", yarnTransactions, "id");
-  }, [yarnTransactions, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const serialized = JSON.stringify(yarnTransactions);
+    if (serialized === lastCloudSyncedRef.current.yarnTransactions) return;
+
+    saveBatchCollection("yarnTransactions", yarnTransactions, "id")
+      .then(() => {
+        lastCloudSyncedRef.current.yarnTransactions = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync partition yarnTransactions failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [yarnTransactions, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
-    if (!isCloudLoaded) return;
-    saveBatchCollection("machinePlans", machinePlans, "id");
-  }, [machinePlans, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const serialized = JSON.stringify(machinePlans);
+    if (serialized === lastCloudSyncedRef.current.machinePlans) return;
+
+    saveBatchCollection("machinePlans", machinePlans, "id")
+      .then(() => {
+        lastCloudSyncedRef.current.machinePlans = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync partition machinePlans failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [machinePlans, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
-    if (!isCloudLoaded) return;
-    saveBatchCollection("productionLogs", productionLogs, "id");
-  }, [productionLogs, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const serialized = JSON.stringify(productionLogs);
+    if (serialized === lastCloudSyncedRef.current.productionLogs) return;
+
+    saveBatchCollection("productionLogs", productionLogs, "id")
+      .then(() => {
+        lastCloudSyncedRef.current.productionLogs = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync partition productionLogs failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [productionLogs, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
-    if (!isCloudLoaded) return;
-    saveBatchCollection("deliveryChallans", deliveryChallans, "challanNo");
-  }, [deliveryChallans, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const serialized = JSON.stringify(deliveryChallans);
+    if (serialized === lastCloudSyncedRef.current.deliveryChallans) return;
+
+    saveBatchCollection("deliveryChallans", deliveryChallans, "challanNo")
+      .then(() => {
+        lastCloudSyncedRef.current.deliveryChallans = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync partition deliveryChallans failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [deliveryChallans, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
-    if (!isCloudLoaded) return;
-    saveBatchCollection("billRecords", billRecords, "id");
-  }, [billRecords, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const serialized = JSON.stringify(billRecords);
+    if (serialized === lastCloudSyncedRef.current.billRecords) return;
+
+    saveBatchCollection("billRecords", billRecords, "id")
+      .then(() => {
+        lastCloudSyncedRef.current.billRecords = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync partition billRecords failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [billRecords, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
-    if (!isCloudLoaded) return;
-    saveSharedSetting("companyProfile", companyProfile);
-  }, [companyProfile, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const serialized = JSON.stringify(companyProfile);
+    if (serialized === lastCloudSyncedRef.current.companyProfile) return;
+
+    saveSharedSetting("companyProfile", companyProfile)
+      .then(() => {
+        lastCloudSyncedRef.current.companyProfile = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync companyProfile failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [companyProfile, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
-    if (!isCloudLoaded) return;
-    saveSharedSetting("poweredByProfile", poweredByProfile);
-  }, [poweredByProfile, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const serialized = JSON.stringify(poweredByProfile);
+    if (serialized === lastCloudSyncedRef.current.poweredByProfile) return;
+
+    saveSharedSetting("poweredByProfile", poweredByProfile)
+      .then(() => {
+        lastCloudSyncedRef.current.poweredByProfile = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync poweredByProfile failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [poweredByProfile, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
-    if (!isCloudLoaded) return;
-    saveBatchCollection("machines", machines, "machineNo");
-  }, [machines, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const serialized = JSON.stringify(machines);
+    if (serialized === lastCloudSyncedRef.current.machines) return;
+
+    saveBatchCollection("machines", machines, "machineNo")
+      .then(() => {
+        lastCloudSyncedRef.current.machines = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync partition machines failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [machines, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
-    if (!isCloudLoaded) return;
-    saveBatchCollection("factories", factories, "name");
-  }, [factories, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const serialized = JSON.stringify(factories);
+    if (serialized === lastCloudSyncedRef.current.factories) return;
+
+    saveBatchCollection("factories", factories, "name")
+      .then(() => {
+        lastCloudSyncedRef.current.factories = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync partition factories failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [factories, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
-    if (!isCloudLoaded) return;
+    if (!isCloudLoaded || isQuotaExceeded) return;
     const statusList = Object.entries(machineStatusMap).map(([mNo, status]) => ({ id: mNo, status }));
-    saveBatchCollection("machineStatuses", statusList, "id");
-  }, [machineStatusMap, isCloudLoaded]);
+    const serialized = JSON.stringify(statusList);
+    if (serialized === lastCloudSyncedRef.current.machineStatuses) return;
+
+    saveBatchCollection("machineStatuses", statusList, "id")
+      .then(() => {
+        lastCloudSyncedRef.current.machineStatuses = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync partition machineStatuses failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [machineStatusMap, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
-    if (!isCloudLoaded) return;
-    saveBatchCollection("users", users, "userId");
-  }, [users, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const serialized = JSON.stringify(users);
+    if (serialized === lastCloudSyncedRef.current.users) return;
+
+    saveBatchCollection("users", users, "userId")
+      .then(() => {
+        lastCloudSyncedRef.current.users = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync partition users failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [users, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
     localStorage.setItem("pro_trial_days", trialDays);
-    if (!isCloudLoaded) return;
-    saveSharedSetting("trialConfig", { trialDays, trialExpirationDate });
-  }, [trialDays, trialExpirationDate, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const payload = { trialDays, trialExpirationDate };
+    const serialized = JSON.stringify(payload);
+    if (serialized === lastCloudSyncedRef.current.trialConfig) return;
+
+    saveSharedSetting("trialConfig", payload)
+      .then(() => {
+        lastCloudSyncedRef.current.trialConfig = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync trialConfig failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [trialDays, trialExpirationDate, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
     if (trialExpirationDate) {
@@ -423,9 +642,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     localStorage.setItem("proplaex_sheets_webhook_url", sheetsWebhookUrl);
-    if (!isCloudLoaded) return;
-    saveSharedSetting("sheetsConfig", { webhookUrl: sheetsWebhookUrl });
-  }, [sheetsWebhookUrl, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const payload = { webhookUrl: sheetsWebhookUrl };
+    const serialized = JSON.stringify(payload);
+    if (serialized === lastCloudSyncedRef.current.sheetsConfig) return;
+
+    saveSharedSetting("sheetsConfig", payload)
+      .then(() => {
+        lastCloudSyncedRef.current.sheetsConfig = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync sheetsConfig failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [sheetsWebhookUrl, isCloudLoaded, isQuotaExceeded]);
 
   useEffect(() => {
     if (googleClientId) {
@@ -433,9 +665,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       localStorage.removeItem("proplaex_google_client_id");
     }
-    if (!isCloudLoaded) return;
-    saveSharedSetting("googleClientIdConfig", { clientId: googleClientId });
-  }, [googleClientId, isCloudLoaded]);
+    if (!isCloudLoaded || isQuotaExceeded) return;
+    const payload = { clientId: googleClientId };
+    const serialized = JSON.stringify(payload);
+    if (serialized === lastCloudSyncedRef.current.googleClientIdConfig) return;
+
+    saveSharedSetting("googleClientIdConfig", payload)
+      .then(() => {
+        lastCloudSyncedRef.current.googleClientIdConfig = serialized;
+      })
+      .catch((err) => {
+        console.error("Cloud sync googleClientIdConfig failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("resource-exhausted")) {
+          setIsQuotaExceeded(true);
+        }
+      });
+  }, [googleClientId, isCloudLoaded, isQuotaExceeded]);
 
   const [autoSyncStatus, setAutoSyncStatus] = useState<"idle" | "syncing" | "success" | "error">("idle");
   const [lastAutoSyncTime, setLastAutoSyncTime] = useState<string | null>(null);
@@ -991,7 +1236,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       autoSyncStatus,
       lastAutoSyncTime,
       googleClientId,
-      updateGoogleClientId: setGoogleClientId
+      updateGoogleClientId: setGoogleClientId,
+      isQuotaExceeded
     }}>
       {children}
     </AppContext.Provider>

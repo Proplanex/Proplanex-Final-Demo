@@ -7,7 +7,7 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenProps) {
-  const { loginUser, trialDays, trialExpirationDate } = useAppState();
+  const { loginUser, trialDays, trialExpirationDate, isExpired } = useAppState();
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -20,14 +20,18 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
       return;
     }
 
-    if (isExpiredRecovery && userId.toLowerCase() !== "superadmin") {
-      setErrorMsg("This workspace is expired. Only 'superadmin' can log in to renew.");
+    if ((isExpiredRecovery || isExpired) && userId.toLowerCase() !== "superadmin") {
+      setErrorMsg("Your trial session has been expired");
       return;
     }
 
     const success = loginUser(userId.trim(), password);
     if (!success) {
-      setErrorMsg("Invalid User ID or Password. Please try again.");
+      if ((isExpiredRecovery || isExpired) && userId.toLowerCase() !== "superadmin") {
+        setErrorMsg("Your trial session has been expired");
+      } else {
+        setErrorMsg("Invalid User ID or Password. Please try again.");
+      }
     } else {
       setErrorMsg("");
     }
@@ -54,12 +58,12 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
           </p>
         </div>
 
-        {isExpiredRecovery && (
+        {(isExpiredRecovery || isExpired) && (
           <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl mb-6 text-red-300 text-xs flex items-start gap-2.5 leading-relaxed">
             <AlertCircle className="h-4.5 w-4.5 text-red-400 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold">License Working Limit Exceeded</p>
-              <p className="opacity-80 mt-0.5">The custom authorization period has expired. Only the <strong className="text-white underline">superadmin</strong> can log in to extend or renew the workspace duration.</p>
+              <p className="opacity-80 mt-0.5">Your trial session has been expired. Only the <strong className="text-white underline">superadmin</strong> can log in to extend or renew the workspace duration.</p>
             </div>
           </div>
         )}

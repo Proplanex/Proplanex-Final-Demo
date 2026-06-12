@@ -22,7 +22,7 @@ import {
 
 function AppContent() {
   const { 
-    currentUser, logoutUser, isExpired, trialDays, trialExpirationDate, companyProfile, factories
+    currentUser, logoutUser, isExpired, trialDays, trialExpirationDate, companyProfile, factories, isQuotaExceeded, poweredByProfile
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState<string>("orders");
@@ -122,7 +122,9 @@ function AppContent() {
         <div className="p-6 space-y-4">
           <div className="flex items-center gap-1.5 justify-between">
             <div className="flex flex-col">
-              <h1 className="text-white font-bold text-lg tracking-tight leading-none">PROPLAEX</h1>
+              <h1 className="text-white font-bold text-lg tracking-tight leading-none">
+                {companyProfile.name ? companyProfile.name.trim().split(" ")[0].toUpperCase() : "PROPLAEX"}
+              </h1>
               <span className="text-[9px] text-indigo-400 font-medium tracking-wide mt-1 uppercase">LIVE STATUS</span>
             </div>
             <span className="text-[9px] bg-emerald-950/80 text-emerald-400 font-bold px-1.5 py-0.5 rounded border border-emerald-900/50 shrink-0 flex items-center gap-1">
@@ -252,12 +254,58 @@ function AppContent() {
 
         {/* INNER VIEW CONTENT SCROLL CONTAINER */}
         <div id="pro_main" className="p-6 md:p-8 space-y-6 flex-1 overflow-y-auto bg-[#f8fafc] print:bg-white print:p-0">
+          {isQuotaExceeded && (
+            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-800 p-5 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs font-medium max-w-full leading-relaxed no-print shadow-sm">
+              <div className="space-y-1">
+                <strong className="text-amber-900 block font-bold text-sm">⚠️ Cloud Sync Quota Exceeded (Free Tier)</strong>
+                <p className="text-amber-800/80">
+                  The application has temporarily reached its daily Firestore writing quotas. Do not worry! All changes are being safely saved locally in your browser's persistent database. Real-time central repository sync will reset and resume automatically tomorrow.
+                </p>
+                <p className="text-slate-500 font-normal">
+                  Detailed quota limits can be checked under the **Spark** plan column in the **Enterprise edition** section of{" "}
+                  <a href="https://firebase.google.com/pricing#cloud-firestore" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-650 font-bold">firebase.google.com/pricing</a>.
+                </p>
+              </div>
+              <a
+                href="https://console.firebase.google.com/project/yarling-tributary-npwwt/firestore/databases/ai-studio-217663a1-6d18-4e57-8b8e-16475a1b7911/data?openUpgradeDialog=true"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-xl shrink-0 text-center transition-all duration-150 shadow-sm whitespace-nowrap inline-block hover:scale-102"
+              >
+                Upgrade Database 🚀
+              </a>
+            </div>
+          )}
           {renderActiveModule()}
 
           {/* FOOTER STRIP */}
           <div className="no-print flex justify-between items-center pt-8 border-t border-slate-250 text-[#94a3b8] font-bold text-[9px] font-mono tracking-wider select-none">
-            <p className="italic uppercase">{companyProfile.tagline || "Precious Planning ● Synchronized Production ● Next Gen Intelligence"}</p>
-            <p className="font-bold">POWERED BY {companyProfile.name || "PROPLANEX"}</p>
+            <div className="flex items-center gap-2">
+              {poweredByProfile?.logoUrl && (
+                <img 
+                  src={poweredByProfile.logoUrl} 
+                  alt="Dev Logo" 
+                  className="h-4.5 w-auto object-contain shrink-0 filter brightness-110 opacity-75 grayscale hover:grayscale-0 transition-all"
+                  referrerPolicy="no-referrer"
+                />
+              )}
+              <p className="italic uppercase">
+                {poweredByProfile?.slogan || companyProfile.tagline || "100% EXPORT ORIENTED COMPANY"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="font-bold uppercase">
+                POWERED BY {poweredByProfile?.name || companyProfile.name || "PROPLANEX APPARELS"}
+              </p>
+              {poweredByProfile?.qrCodeUrl && (
+                <img 
+                  src={poweredByProfile.qrCodeUrl} 
+                  alt="Token Scan" 
+                  className="h-4.5 w-4.5 object-contain shrink-0 border border-slate-200 p-0.5 rounded bg-white opacity-75 hover:opacity-100 transition-all"
+                  referrerPolicy="no-referrer"
+                />
+              )}
+            </div>
           </div>
         </div>
       </main>
