@@ -631,7 +631,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl py-2.5 font-semibold cursor-pointer shadow-indigo-200 shadow-sm"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 font-semibold cursor-pointer shadow-indigo-200 shadow-sm"
                 >
                   Save Production
                 </button>

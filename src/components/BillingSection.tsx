@@ -254,11 +254,11 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
             <p className="text-2xl font-semibold text-indigo-700 mt-2 font-mono">
               ৳ {totalBilledSummaryBDT.toLocaleString()}
             </p>
-            <div className="mt-1 text-[11px] text-slate-450 text-indigo-650 font-semibold font-mono">
+            <div className="mt-1 text-[11px] text-slate-400 text-indigo-650 font-semibold font-mono">
               Invoiced turnover in BDT
             </div>
           </div>
-          <div className="bg-indigo-50 p-3 rounded-xl text-indigo-650 font-bold overflow-hidden text-sm">
+          <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600 font-bold overflow-hidden text-sm">
             ৳ BDT
           </div>
         </div>
@@ -273,7 +273,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
         <div className="flex gap-2 w-full sm:w-auto">
           <button
             onClick={handleExportBillingLedgerExcel}
-            className="flex-1 sm:flex-none border border-slate-200 hover:bg-slate-50 text-slate-650 font-semibold text-xs px-4 py-2 rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-colors"
+            className="flex-1 sm:flex-none border border-slate-200 hover:bg-slate-50 text-slate-500 font-semibold text-xs px-4 py-2 rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-colors"
           >
             <FileDown className="h-4 w-4" /> Export Ledger
           </button>
@@ -406,7 +406,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
                       <button
                         type="button"
                         onClick={handleAddChallanSelector}
-                        className="bg-indigo-650 hover:bg-indigo-750 text-white rounded p-1 text-xs font-bold w-6 h-6 flex items-center justify-center cursor-pointer"
+                        className="bg-indigo-600 hover:bg-indigo-750 text-white rounded p-1 text-xs font-bold w-6 h-6 flex items-center justify-center cursor-pointer"
                       >
                         +
                       </button>
@@ -471,7 +471,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-650 py-2.5 rounded-xl font-semibold cursor-pointer"
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-500 py-2.5 rounded-xl font-semibold cursor-pointer"
                   >
                     Cancel Billing
                   </button>
@@ -589,13 +589,13 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
               <div className="flex gap-2">
                 <button
                   onClick={triggerPrintBill}
-                  className="bg-red-650 hover:bg-red-750 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                  className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
                 >
                   <FileDown className="h-4 w-4" /> Download PDF
                 </button>
                 <button
                   onClick={triggerPrintBill}
-                  className="bg-indigo-650 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
                 >
                   <Printer className="h-4 w-4" /> Print Bill
                 </button>
@@ -650,7 +650,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
               </div>
 
               {/* METADATA GRID */}
-              <div className="flex justify-between text-xs text-slate-650 border-t border-b border-slate-150 py-3 mt-4">
+              <div className="flex justify-between text-xs text-slate-600 border-t border-b border-slate-150 py-3 mt-4">
                 <div className="space-y-1">
                   <p><span className="text-slate-400 block mb-0.5">INVOICE PREPARED TO / DEBTOR:</span> <strong className="text-slate-900 text-sm">{activePrintBill.factoryName}</strong></p>
                   <p className="text-[10px] max-w-xs">{factories.find(f => f.name === activePrintBill.factoryName)?.address || "N/A Address"}</p>

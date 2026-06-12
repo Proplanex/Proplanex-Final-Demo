@@ -123,9 +123,12 @@ function AppContent() {
           <div className="flex items-center gap-1.5 justify-between">
             <div className="flex flex-col">
               <h1 className="text-white font-bold text-lg tracking-tight leading-none">PROPLAEX</h1>
-              <span className="text-[9px] text-indigo-400 font-medium tracking-wide mt-1 uppercase">HUB GATEWAY</span>
+              <span className="text-[9px] text-indigo-400 font-medium tracking-wide mt-1 uppercase">LIVE STATUS</span>
             </div>
-            <span className="text-[9px] bg-slate-800 text-indigo-400 font-mono font-bold px-1.5 py-0.5 rounded border border-slate-750 shrink-0">V2.8</span>
+            <span className="text-[9px] bg-emerald-950/80 text-emerald-400 font-bold px-1.5 py-0.5 rounded border border-emerald-900/50 shrink-0 flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
+              ACTIVE
+            </span>
           </div>
 
           {/* BRAND COMPANY LOGO OVERRIDE */}

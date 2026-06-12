@@ -436,7 +436,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
         <div className="col-span-2 lg:col-span-1 flex items-end">
           <button
             onClick={handleExportLedgerExcel}
-            className="w-full bg-emerald-650 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
           >
             <FileDown className="h-4 w-4" /> Export Ledger
           </button>
@@ -953,7 +953,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
               <div className="flex gap-2">
                 <button
                   onClick={triggerPrintChallan}
-                  className="bg-red-650 hover:bg-red-750 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                  className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
                 >
                   <FileDown className="h-4 w-4" /> Download PDF
                 </button>
@@ -1013,7 +1013,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                 </div>
               </div>
 
-              <div className="flex justify-between text-xs text-slate-650 border-t border-b border-slate-150 py-3 mt-4">
+              <div className="flex justify-between text-xs text-slate-600 border-t border-b border-slate-150 py-3 mt-4">
                 <div className="space-y-1">
                   <p><span className="text-slate-400 block mb-0.5">FOR/DELIVERED TO:</span> <strong className="text-slate-900 text-sm">{activePrintChallan.factoryName}</strong></p>
                   <p className="text-[10px] max-w-xs">{factories.find(f => f.name === activePrintChallan.factoryName)?.address || "N/A Address"}</p>

@@ -504,7 +504,7 @@ export default function SettingsSection({ readOnly = false }: SettingsProps) {
                 type="button"
                 disabled={readOnly}
                 onClick={() => setShowFactoryModal(true)}
-                className="bg-indigo-650 hover:bg-indigo-750 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[11px] font-bold py-1.5 px-3 rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[11px] font-bold py-1.5 px-3 rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-colors"
               >
                 <Plus className="h-4.5 w-4.5" /> Add Factory
               </button>
