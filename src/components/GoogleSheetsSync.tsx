@@ -22,13 +22,24 @@ export default function GoogleSheetsSync() {
   const [customClientId, setCustomClientId] = useState<string>("");
   const isSavedClient = !!state.googleClientId;
   const [showConfigPanel, setShowConfigPanel] = useState<boolean>(false);
+  const [activeConfigTab, setActiveConfigTab] = useState<"webhook" | "oauth">("webhook");
+  const [webhookUrlInput, setWebhookUrlInput] = useState<string>("");
+  const [copiedAppscript, setCopiedAppscript] = useState<boolean>(false);
+  const [isTestingWebhook, setIsTestingWebhook] = useState<boolean>(false);
+  const [testWebhookResult, setTestWebhookResult] = useState<string | null>(null);
 
-  // Sync custom client ID local state with cloud state
+  // Sync custom client ID and webhook local state with cloud state
   useEffect(() => {
     if (state.googleClientId) {
       setCustomClientId(state.googleClientId);
     }
   }, [state.googleClientId]);
+
+  useEffect(() => {
+    if (state.sheetsWebhookUrl) {
+      setWebhookUrlInput(state.sheetsWebhookUrl);
+    }
+  }, [state.sheetsWebhookUrl]);
 
   // Load from localStorage on mount and initialize Firebase or Custom OAuth state
   useEffect(() => {
@@ -199,6 +210,80 @@ export default function GoogleSheetsSync() {
     }
   };
 
+  const handleSaveWebhook = (e: React.FormEvent) => {
+    e.preventDefault();
+    const url = webhookUrlInput.trim();
+    if (!url) {
+      alert("Please enter a valid Google Apps Script Web App URL!");
+      return;
+    }
+    if (!url.startsWith("https://script.google.com/")) {
+      alert("Invalid Web App Webhook URL. It must begin with: 'https://script.google.com/'");
+      return;
+    }
+
+    state.updateSheetsWebhookUrl(url);
+    alert("Successfully activated Google Sheets background sync webhook! All system updates are now fully synchronized instantly in real-time.");
+  };
+
+  const handleClearWebhook = () => {
+    if (window.confirm("Disconnect and clear your Sheets Background Sync Webhook URL?")) {
+      state.updateSheetsWebhookUrl("");
+      setWebhookUrlInput("");
+      setTestWebhookResult(null);
+    }
+  };
+
+  const handleTestWebhook = async () => {
+    const url = webhookUrlInput.trim();
+    if (!url || !url.startsWith("https://script.google.com/")) {
+      alert("Please configure and save a valid Google Web App URL (beginning with https://script.google.com/) before running the connection test!");
+      return;
+    }
+
+    setIsTestingWebhook(true);
+    setTestWebhookResult(null);
+    try {
+      const payload = {
+        orders: state.orders,
+        yarnTransactions: state.yarnTransactions,
+        machinePlans: state.machinePlans,
+        productionLogs: state.productionLogs,
+        deliveryChallans: state.deliveryChallans,
+        billRecords: state.billRecords,
+        machines: state.machines,
+        factories: state.factories,
+        machineStatusMap: state.machineStatusMap,
+        users: state.users
+      };
+
+      const res = await fetch(url, {
+        method: "POST",
+        mode: "cors",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const raw = await res.json();
+        if (raw.status === "success") {
+          setTestWebhookResult("Success! Connection successfully established and database synchronized elegantly.");
+        } else {
+          setTestWebhookResult(`Failed: Subscript responded with: ${raw.message || "Unknown error"}`);
+        }
+      } else {
+        setTestWebhookResult(`Failed to connect (HTTP status: ${res.status}). Verify your script is authorized and deployed for 'Anyone'.`);
+      }
+    } catch (e: any) {
+      console.error(e);
+      setTestWebhookResult(`Connection failed: ${e.message || e}. Double-check that Web App CORS options are configured for 'Anyone' access.`);
+    } finally {
+      setIsTestingWebhook(false);
+    }
+  };
+
   // Synchronize Master Tables to Google Spreadsheet
   const handleSyncDatabase = async () => {
     const token = accessToken || (await getAccessToken());
@@ -325,103 +410,454 @@ export default function GoogleSheetsSync() {
         </div>
       )}
 
-      {/* Google Developer OAuth Client ID Configuration Panel */}
+      {/* Google Developer OAuth or Webhook Configuration Panel */}
       {showConfigPanel && (
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4 animate-fadeIn">
-          <div className="flex items-start gap-2 pb-3 border-b border-slate-200/60 text-slate-800">
-            <Key className="h-4.5 w-4.5 text-indigo-600 shrink-0 mt-0.5" />
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Self-Managed Google Connection Profile</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Authorizes the Sheets SDK directly on any platform hosting, such as Proplanex live Vercel deployments.</p>
+        <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-5 animate-fadeIn">
+          <div className="flex items-start justify-between border-b border-slate-200/60 pb-3">
+            <div className="flex items-start gap-2 text-slate-800">
+              <Settings className="h-4.5 w-4.5 text-indigo-600 shrink-0 mt-0.5 animate-spin-slow" />
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Configure Centralized Synced Connection Channel</h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">Settings entered here are secured centrally in the cloud database & applied to all devices automatically.</p>
+              </div>
             </div>
           </div>
 
-          <form onSubmit={handleSaveClientId} className="space-y-3.5">
-            <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold text-slate-700">Google Cloud Console OAuth 2.0 Web Client ID</label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  disabled={isSavedClient}
-                  value={customClientId}
-                  onChange={(e) => setCustomClientId(e.target.value)}
-                  placeholder="e.g. xxxxxxxxxxxx-xxxxxxxxxxxxxxxx.apps.googleusercontent.com"
-                  className="flex-1 p-2.5 border border-slate-250 bg-white rounded-lg text-xs font-mono placeholder:text-slate-400 disabled:bg-slate-100 disabled:text-slate-500 shadow-3xs"
-                />
-                
-                {isSavedClient ? (
-                  <button
-                    type="button"
-                    onClick={handleClearClientId}
-                    className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:border-red-300 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-colors"
-                  >
-                    Clear Credentials
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-xs font-bold shadow-3xs cursor-pointer shrink-0 transition-all active:scale-98"
-                  >
-                    Save & Activate
-                  </button>
+          {/* Navigation tab selector */}
+          <div className="flex border-b border-slate-200 scrollbar-none overflow-x-auto">
+            <button
+              onClick={() => setActiveConfigTab("webhook")}
+              className={`py-2 px-4 text-xs font-bold border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all ${
+                activeConfigTab === "webhook"
+                  ? "border-emerald-500 text-emerald-700"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <Globe className="h-4 w-4 text-emerald-500" />
+              Option A: Apps Script Webhook (Recommended)
+            </button>
+            <button
+              onClick={() => setActiveConfigTab("oauth")}
+              className={`py-2 px-4 text-xs font-bold border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all ${
+                activeConfigTab === "oauth"
+                  ? "border-indigo-500 text-indigo-700"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <Key className="h-4 w-4 text-indigo-500" />
+              Option B: OAuth login (Client ID)
+            </button>
+          </div>
+
+          {activeConfigTab === "webhook" ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-emerald-50/40 border border-emerald-100 rounded-xl space-y-1 text-xs">
+                <h4 className="text-emerald-950 font-bold">Why use Apps Script Webhook?</h4>
+                <p className="text-[11px] text-emerald-800 leading-relaxed font-semibold">
+                  This is the absolute <strong>easiest & best setup for public domains (like Vercel)</strong>. It requires <strong>ZERO Google logins or popup panels</strong>. Instead, our system executes a clean JSON sync directly to your personal Google Sheet automatically in the background whenever any data changes!
+                </p>
+              </div>
+
+              {/* Webhook Input form */}
+              <form onSubmit={handleSaveWebhook} className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider font-mono">
+                    Google Apps Script Published Web App URL
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="url"
+                      value={webhookUrlInput}
+                      onChange={(e) => setWebhookUrlInput(e.target.value)}
+                      placeholder="e.g. https://script.google.com/macros/s/xxxxxxxxxxxx/exec"
+                      className="flex-1 p-2.5 border border-slate-250 bg-white rounded-lg text-xs font-mono placeholder:text-slate-400 shadow-3xs"
+                    />
+
+                    <div className="flex gap-2 shrink-0">
+                      {state.sheetsWebhookUrl ? (
+                        <button
+                          type="button"
+                          onClick={handleClearWebhook}
+                          className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100/90 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                        >
+                          Disconnect
+                        </button>
+                      ) : (
+                        <button
+                          type="submit"
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-3xs cursor-pointer transition-all active:scale-98"
+                        >
+                          Connect Web App
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleTestWebhook}
+                        disabled={isTestingWebhook || !webhookUrlInput}
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white rounded-lg text-xs font-bold transition-all disabled:cursor-not-allowed"
+                      >
+                        {isTestingWebhook ? "Testing..." : "Test Connection"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {testWebhookResult && (
+                  <div className={`p-3 rounded-lg text-[11px] font-semibold border ${
+                    testWebhookResult.startsWith("Success")
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-150"
+                      : "bg-red-50 text-red-800 border-red-150"
+                  }`}>
+                    {testWebhookResult}
+                  </div>
                 )}
+              </form>
+
+              {/* Apps Script Guide Container */}
+              <div className="bg-white border border-slate-200/80 p-4 rounded-xl space-y-3.5 max-h-[300px] overflow-y-auto">
+                <div className="space-y-1">
+                  <h4 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                    <span>⚡</span> 30-Second Webhook Setup Instructions:
+                  </h4>
+                  <ol className="list-decimal pl-4 text-[11px] text-slate-600 space-y-1.5 font-semibold">
+                    <li>Create a brand-new Spreadsheet in your personal Google Drive account.</li>
+                    <li>Inside the Sheet, go to the top menu and select <strong>Extensions &gt; Apps Script</strong>.</li>
+                    <li>Erase any pre-populated code template inside the editor and paste the code block below.</li>
+                    <li>Click <strong>Save</strong> (floppy disk icon), then click <strong>Deploy &gt; New deployment</strong>.</li>
+                    <li>In the "Select type" gear, select <strong>Web app</strong>:
+                      <ul className="list-disc pl-4 mt-0.5 space-y-0.5 text-slate-500 text-[10.5px]">
+                        <li><strong>Execute as:</strong> Choose <code>Me (your Google email account)</code></li>
+                        <li><strong>Who has access:</strong> Choose <code>Anyone</code> (This allows anonymous CORS postings from Vercel)</li>
+                      </ul>
+                    </li>
+                    <li>Click <strong>Deploy</strong>, copy the generated Web App URL, paste it inside the field above, and click <strong>Connect Web App!</strong></li>
+                  </ol>
+                </div>
+
+                {/* Copyable code box */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Apps Script Sync Code</span>
+                    <button
+                      onClick={() => {
+                        const scriptCode = `function doPost(e) {
+  try {
+    var payload = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    var titlePrefix = "Proplanex ERP Master Database";
+    var dateStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MMM dd, yyyy, hh:mm a");
+    ss.setName(titlePrefix + " - Live " + dateStr);
+
+    // 1. ORDERS
+    var ordersHeaders = [
+      "Order No", "Receive Date", "Factory Name", "Factory Order", "Fabric Type", 
+      "Dia x GG", "Color", "Finish GSM", "Finish Dia", "Factory Job No", 
+      "Rate (BDT)", "Required Qty (Kg)", "Status", "Remarks", 
+      "Yarn 1 YC", "Yarn 1 Lot", "Yarn 1 Spinner", "Yarn 1 S/L", 
+      "Yarn 2 YC", "Yarn 2 Lot", "Yarn 2 Spinner", "Yarn 2 S/L", 
+      "Yarn 3 YC", "Yarn 3 Lot", "Yarn 3 Spinner", "Yarn 3 S/L", 
+      "Yarn 4 YC", "Yarn 4 Lot", "Yarn 4 Spinner", "Yarn 4 S/L"
+    ];
+    var ordersRows = [];
+    if (payload.orders && payload.orders.length) {
+      payload.orders.forEach(function(o) {
+        var yarns = o.yarns || [];
+        var y1 = yarns[0] || { yc: "", lot: "", spinner: "", sl: "" };
+        var y2 = yarns[1] || { yc: "", lot: "", spinner: "", sl: "" };
+        var y3 = yarns[2] || { yc: "", lot: "", spinner: "", sl: "" };
+        var y4 = yarns[3] || { yc: "", lot: "", spinner: "", sl: "" };
+        ordersRows.push([
+          o.orderNo, o.receiveDate, o.factoryName, o.factoryOrder, o.fabricType, 
+          o.diaGG, o.color, o.finishGSM, o.finishDia, o.factoryJobNo, 
+          o.rate, o.requiredQty, o.status, o.remarks,
+          y1.yc, y1.lot, y1.spinner, y1.sl,
+          y2.yc, y2.lot, y2.spinner, y2.sl,
+          y3.yc, y3.lot, y3.spinner, y3.sl,
+          y4.yc, y4.lot, y4.spinner, y4.sl
+        ]);
+      });
+    }
+    writeToSheet(ss, "Orders", ordersHeaders, ordersRows);
+
+    // 2. YARN TRANSACTIONS
+    var yarnHeaders = ["Transaction ID", "Order No", "Date", "Mode", "Yarn Count (YC)", "Lot No", "Spinner", "Quantity (Kg)"];
+    var yarnRows = [];
+    if (payload.yarnTransactions && payload.yarnTransactions.length) {
+      payload.yarnTransactions.forEach(function(tx) {
+        yarnRows.push([tx.id, tx.orderNo, tx.date, tx.mode, tx.yc, tx.lot, tx.spinner, tx.qty]);
+      });
+    }
+    writeToSheet(ss, "Yarn Transactions", yarnHeaders, yarnRows);
+
+    // 3. JOB CARDS
+    var planningHeaders = ["Job Card No", "Order No", "Plan Date", "Machine No", "Planned Qty (Kg)"];
+    var planningRows = [];
+    if (payload.machinePlans && payload.machinePlans.length) {
+      payload.machinePlans.forEach(function(p) {
+        planningRows.push([p.jobCardNo, p.orderNo, p.planDate, p.machineNo, p.plannedQty]);
+      });
+    }
+    writeToSheet(ss, "Job Cards (Planning)", planningHeaders, planningRows);
+
+    // 4. PRODUCTION LOGS
+    var productionHeaders = ["Log ID", "Date", "Order No", "Job Card No", "Machine No", "Shift", "Net Production Qty (Kg)"];
+    var productionRows = [];
+    if (payload.productionLogs && payload.productionLogs.length) {
+      payload.productionLogs.forEach(function(l) {
+        productionRows.push([l.id, l.date, l.orderNo, l.jobCardNo, l.machineNo, l.shift, l.qty]);
+      });
+    }
+    writeToSheet(ss, "Production Logs", productionHeaders, productionRows);
+
+    // 5. DELIVERY CHALLANS
+    var deliveryHeaders = [
+      "Challan No", "Challan Date", "Factory Name", "Truck No", "Driver Name", 
+      "Delivery Type", "Item - Order No", "Item - Cargo/Rolls", "Item - Weight (Kg)", "Item Info"
+    ];
+    var deliveryRows = [];
+    if (payload.deliveryChallans && payload.deliveryChallans.length) {
+      payload.deliveryChallans.forEach(function(ch) {
+        if (ch.type === "Grey Fabric Delivery" && ch.greyItems && ch.greyItems.length) {
+          ch.greyItems.forEach(function(item) {
+            deliveryRows.push([
+              ch.challanNo, ch.date, ch.factoryName, ch.truckNo, ch.driverName, ch.type,
+              item.orderNo, "Roll " + item.roll, item.qty, "Knit Fabric Cargo"
+            ]);
+          });
+        } else if (ch.type === "Yarn Return" && ch.yarnItems && ch.yarnItems.length) {
+          ch.yarnItems.forEach(function(item) {
+            deliveryRows.push([
+              ch.challanNo, ch.date, ch.factoryName, ch.truckNo, ch.driverName, ch.type,
+              item.orderNo, "Bag " + item.bag, item.qty, item.yc + " | Lot " + item.lot + " | Spin " + item.spinner
+            ]);
+          });
+        } else {
+          deliveryRows.push([
+            ch.challanNo, ch.date, ch.factoryName, ch.truckNo, ch.driverName, ch.type,
+            "", "", 0, "No item detail lines"
+          ]);
+        }
+      });
+    }
+    writeToSheet(ss, "Delivery Challans", deliveryHeaders, deliveryRows);
+
+    // 6. BILLED INVOICES
+    var billingHeaders = [
+      "Invoice ID", "Date", "Factory Name", "Total Amount (BDT)", "Taka In Words", 
+      "Detail - Challan No", "Detail - Order No", "Detail - Factory Order", 
+      "Detail - Factory Job No", "Detail - Fabric Type", "Detail - Qty (Kg)", 
+      "Detail - Rate (BDT)", "Detail - Subtotal (BDT)"
+    ];
+    var billingRows = [];
+    if (payload.billRecords && payload.billRecords.length) {
+      payload.billRecords.forEach(function(b) {
+        if (b.items && b.items.length) {
+          b.items.forEach(function(item) {
+            billingRows.push([
+              b.id, b.date, b.factoryName, b.totalAmount, b.takaInWords,
+              item.challanNo, item.orderNo, item.factoryOrder, item.factoryJobNo, 
+              item.fabricType, item.qty, item.rate, item.amount
+            ]);
+          });
+        } else {
+          billingRows.push([
+            b.id, b.date, b.factoryName, b.totalAmount, b.takaInWords,
+            "", "", "", "", "", 0, 0, 0
+          ]);
+        }
+      });
+    }
+    writeToSheet(ss, "Billed Invoices", billingHeaders, billingRows);
+
+    // 7. KNITTING MACHINES
+    var machineHeaders = [
+      "Machine No", "Dia", "GG", "Machine Type", "Knit Type", 
+      "Brand", "Origin", "RPM", "Feeder", "Code", "Efficiency (%)", 
+      "Capacity Per Day (Kg)", "Current Machine Status Check"
+    ];
+    var machineRows = [];
+    if (payload.machines && payload.machines.length) {
+      var statusMap = payload.machineStatusMap || {};
+      payload.machines.forEach(function(m) {
+        var stat = statusMap[m.machineNo] || "Available";
+        machineRows.push([
+          m.machineNo, m.dia, m.gg, m.machineType || "Single Jersey", m.fabricType || "SJ",
+          m.brand || "", m.origin || "", m.rpm || "", m.feeder || "", m.code || "", m.efficiency || "",
+          m.capacityPerDay || "", stat
+        ]);
+      });
+    }
+    writeToSheet(ss, "Knitting Machines", machineHeaders, machineRows);
+
+    // 8. PARTNER FACTORIES
+    var factoryHeaders = ["Factory Name", "Responsible Person", "Designation", "Phone", "Email", "Location Address"];
+    var factoryRows = [];
+    if (payload.factories && payload.factories.length) {
+      payload.factories.forEach(function(f) {
+        factoryRows.push([f.name, f.responsiblePerson || "", f.designation || "", f.phone || "", f.email || "", f.address]);
+      });
+    }
+    writeToSheet(ss, "Partner Factories", factoryHeaders, factoryRows);
+
+    // 9. REGISTERED USERS
+    var userHeaders = ["User ID", "Full Name", "Role Designation", "Allowed Modules Authorization", "Joined/Created Date"];
+    var userRows = [];
+    if (payload.users && payload.users.length) {
+      payload.users.forEach(function(u) {
+        var modPerms = [];
+        if (u.permissions) {
+          for (var k in u.permissions) {
+            if (u.permissions[k]) {
+              modPerms.push(k);
+            }
+          }
+        }
+        userRows.push([u.userId, u.name, u.role, modPerms.join(", "), u.joinedDate || ""]);
+      });
+    }
+    writeToSheet(ss, "Registered Users", userHeaders, userRows);
+
+    return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Synchronized " + Date.now() }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch(error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function writeToSheet(ss, sheetName, headers, rows) {
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  } else {
+    sheet.clear();
+  }
+  
+  var grid = [headers];
+  if (rows && rows.length) {
+    grid = grid.concat(rows);
+  }
+  sheet.getRange(1, 1, grid.length, headers.length).setValues(grid);
+  
+  sheet.getRange(1, 1, 1, headers.length)
+    .setBackground("#f1f5f9")
+    .setFontWeight("bold")
+    .setFontColor("#334155");
+}`;
+                        navigator.clipboard.writeText(scriptCode);
+                        setCopiedAppscript(true);
+                        setTimeout(() => setCopiedAppscript(false), 2000);
+                      }}
+                      className="px-2.5 py-1 text-[10px] bg-slate-100 border hover:bg-slate-200 text-slate-700 font-bold rounded cursor-pointer select-none transition-all flex items-center gap-1 shrink-0"
+                    >
+                      {copiedAppscript ? (
+                        <>
+                          <Check className="h-3 w-3 text-emerald-600" />
+                          <span>Code Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3 text-slate-500" />
+                          <span>Copy Script Code</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <pre className="p-3 bg-slate-900 border text-emerald-400 rounded-lg text-[10px] font-mono overflow-x-auto max-h-56 select-all font-medium leading-normal whitespace-pre">
+                    {`// See script contents by clicking copy script button...`}
+                  </pre>
+                </div>
               </div>
             </div>
+          ) : (
+            <form onSubmit={handleSaveClientId} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider font-mono">
+                  Google Cloud Console OAuth 2.0 Web Client ID
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    disabled={isSavedClient}
+                    value={customClientId}
+                    onChange={(e) => setCustomClientId(e.target.value)}
+                    placeholder="e.g. xxxxxxxxxxxx-xxxxxxxxxxxxxxxx.apps.googleusercontent.com"
+                    className="flex-1 p-2.5 border border-slate-250 bg-white rounded-lg text-xs font-mono placeholder:text-slate-400 disabled:bg-slate-100 disabled:text-slate-500 shadow-3xs"
+                  />
+                  
+                  {isSavedClient ? (
+                    <button
+                      type="button"
+                      onClick={handleClearClientId}
+                      className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:border-red-300 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-colors"
+                    >
+                      Clear Credentials
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-xs font-bold shadow-3xs cursor-pointer shrink-0 transition-all active:scale-98"
+                    >
+                      Save & Activate
+                    </button>
+                  )}
+                </div>
+              </div>
 
-            {/* Instruction manual box */}
-            <div className="bg-white border border-slate-200/80 p-3.5 rounded-lg text-[11px] text-slate-600 space-y-2 max-h-56 overflow-y-auto pr-1">
-              <p className="font-bold text-slate-900 flex items-center gap-1">
-                <span>🔧</span> Step-by-Step Google Developer Whitelisting Guide:
-              </p>
-              <ol className="list-decimal pl-4 space-y-1.5 font-medium">
-                <li>
-                  Open the official{" "}
-                  <a 
-                    href="https://console.cloud.google.com/" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-indigo-600 hover:text-indigo-800 underline font-semibold inline-flex items-center gap-0.5"
-                  >
-                    Google Cloud Console <ExternalLink className="h-3 w-3" />
-                  </a>{" "}
-                  using your personal Google account (it's completely free).
-                </li>
-                <li>
-                  Select or create any workspace project, then search/open <strong>APIs & Services</strong>. Go to <strong>Enabled APIs & Services</strong>, click <i>"+ Enable APIs"</i> and search for <strong>Google Sheets API</strong> & <strong>Google Drive API</strong> and turn them both ON.
-                </li>
-                <li>
-                  Go to <strong>OAuth Consent Screen</strong>:
-                  <ul className="list-disc pl-4 mt-0.5 space-y-0.5 scale-95 text-slate-500">
-                    <li>Choose <strong>External</strong> app type.</li>
-                    <li>Add your email address in the developer & contact forms.</li>
-                    <li>Add scopes: <code>.../auth/spreadsheets</code> and <code>.../auth/drive.file</code>.</li>
-                    <li>In <strong>Test users</strong> page, add your Google email address as authorized test user! This is mandatory in sandbox.</li>
-                  </ul>
-                </li>
-                <li>
-                  Go to <strong>Credentials</strong> &gt; click <strong>+ Create Credentials</strong> &gt; and select <strong>OAuth Client ID</strong>.
-                </li>
-                <li>
-                  Under Application Type, select <strong>Web application</strong>.
-                </li>
-                <li>
-                  Add URI under <strong>Authorized JavaScript origins</strong>:
-                  <code className="bg-slate-100 border text-slate-800 p-0.5 px-1.5 rounded ml-1 font-mono text-[10px] select-all font-bold">
-                    {window.location.origin}
-                  </code>
-                </li>
-                <li>
-                  Add URI under <strong>Authorized redirect URIs</strong> (exact same format with trailing slash):
-                  <code className="bg-slate-100 border text-slate-800 p-0.5 px-1.5 rounded ml-1 font-mono text-[10px] select-all font-bold">
-                    {window.location.origin}/
-                  </code>
-                </li>
-                <li>
-                  Click <strong>Create</strong>, copy the generated client ID string from Google, and paste it into the form key above!
-                </li>
-              </ol>
-            </div>
-          </form>
+              {/* Instruction manual box */}
+              <div className="bg-white border border-slate-200/80 p-3.5 rounded-lg text-[11px] text-slate-600 space-y-2 max-h-56 overflow-y-auto pr-1">
+                <p className="font-bold text-slate-900 flex items-center gap-1">
+                  <span>🔧</span> Step-by-Step Google Developer Whitelisting Guide:
+                </p>
+                <ol className="list-decimal pl-4 space-y-1.5 font-medium">
+                  <li>
+                    Open the official{" "}
+                    <a 
+                      href="https://console.cloud.google.com/" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-indigo-600 hover:text-indigo-800 underline font-semibold inline-flex items-center gap-0.5"
+                    >
+                      Google Cloud Console <ExternalLink className="h-3 w-3" />
+                    </a>{" "}
+                    using your Google account.
+                  </li>
+                  <li>
+                    Search for <strong>APIs & Services</strong>. Go to <strong>Enabled APIs & Services</strong>, click <i>"+ Enable APIs"</i> and search/turn ON <strong>Google Sheets API</strong> & <strong>Google Drive API</strong>.
+                  </li>
+                  <li>
+                    Go to <strong>OAuth Consent Screen</strong>:
+                    <ul className="list-disc pl-4 mt-0.5 space-y-0.5 scale-95 text-slate-500">
+                      <li>Choose <strong>External</strong> app type.</li>
+                      <li>Add your email address in the developer contact forms.</li>
+                      <li>Add scopes: <code>.../auth/spreadsheets</code> and <code>.../auth/drive.file</code>.</li>
+                      <li>In <strong>Test users</strong> page, add your Google account email as authorized test user!</li>
+                    </ul>
+                  </li>
+                  <li>
+                    Go to <strong>Credentials</strong> &gt; click <strong>+ Create Credentials</strong> &gt; and select <strong>OAuth Client ID</strong>.
+                  </li>
+                  <li>Under Application Type, select <strong>Web application</strong>.</li>
+                  <li>
+                    Add URI under <strong>Authorized JavaScript origins</strong>:
+                    <code className="bg-slate-100 border text-slate-850 p-0.5 px-1 rounded ml-1 font-mono text-[10px] select-all font-bold">
+                      {window.location.origin}
+                    </code>
+                  </li>
+                  <li>
+                    Add URI under <strong>Authorized redirect URIs</strong> (exact same format with trailing slash):
+                    <code className="bg-slate-100 border text-slate-850 p-0.5 px-1 rounded ml-1 font-mono text-[10px] select-all font-bold">
+                      {window.location.origin}/
+                    </code>
+                  </li>
+                  <li>Click <strong>Create</strong>, copy the generated client ID string from Google, and paste it into the form above!</li>
+                </ol>
+              </div>
+            </form>
+          )}
         </div>
       )}
 
