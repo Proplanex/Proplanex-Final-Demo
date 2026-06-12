@@ -89,6 +89,7 @@ interface AppContextType {
   googleClientId: string;
   updateGoogleClientId: (clientId: string) => void;
   isQuotaExceeded: boolean;
+  retryCloudSync: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -142,7 +143,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [isCloudLoaded, setIsCloudLoaded] = useState<boolean>(false);
-  const [isQuotaExceeded, setIsQuotaExceeded] = useState<boolean>(false);
+  const [isQuotaExceeded, _setIsQuotaExceeded] = useState<boolean>(() => {
+    // Clear legacy localStorage key to self-heal existing browsers
+    localStorage.removeItem("pro_firestore_quota_exceeded");
+    return sessionStorage.getItem("pro_firestore_quota_exceeded") === "true";
+  });
+  const setIsQuotaExceeded = (val: boolean) => {
+    if (val) {
+      sessionStorage.setItem("pro_firestore_quota_exceeded", "true");
+    } else {
+      sessionStorage.removeItem("pro_firestore_quota_exceeded");
+    }
+    _setIsQuotaExceeded(val);
+  };
+  const [syncTrigger, setSyncTrigger] = useState<number>(0);
+
+  const retryCloudSync = () => {
+    sessionStorage.removeItem("pro_firestore_quota_exceeded");
+    _setIsQuotaExceeded(false);
+    setIsCloudLoaded(false);
+    setSyncTrigger(prev => prev + 1);
+  };
 
   // Tracks the serialized string representation of the last known state loaded or saved to cloud Firestore
   const lastCloudSyncedRef = useRef<Record<string, string>>({
@@ -166,6 +187,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Initial Central Cloud load of configurations and database lists
   useEffect(() => {
     async function initCloudAndSync() {
+      if (sessionStorage.getItem("pro_firestore_quota_exceeded") === "true") {
+        setIsQuotaExceeded(true);
+        console.warn("Firestore writing/reading quota limit previously reached. Running in offline mode.");
+        return;
+      }
       try {
         await validateFirestoreConnection();
 
@@ -272,13 +298,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log("Central cloud data sync has connected successfully.");
       } catch (error) {
         console.error("Central cloud setup failed:", error);
-        if (error instanceof Error && (error.message.includes("quota") || error.message.includes("resource-exhausted"))) {
+        if (error instanceof Error && (error.message.toLowerCase().includes("quota") || error.message.toLowerCase().includes("resource-exhausted"))) {
+          sessionStorage.setItem("pro_firestore_quota_exceeded", "true");
           setIsQuotaExceeded(true);
         }
       }
     }
     initCloudAndSync();
-  }, []);
+  }, [syncTrigger]);
 
   // Read state from LocalStorage or seed with defaults
   const [orders, setOrders] = useState<Order[]>(() => {
@@ -1237,7 +1264,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lastAutoSyncTime,
       googleClientId,
       updateGoogleClientId: setGoogleClientId,
-      isQuotaExceeded
+      isQuotaExceeded,
+      retryCloudSync
     }}>
       {children}
     </AppContext.Provider>

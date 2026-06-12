@@ -22,7 +22,7 @@ import {
 
 function AppContent() {
   const { 
-    currentUser, logoutUser, isExpired, trialDays, trialExpirationDate, companyProfile, factories, isQuotaExceeded, poweredByProfile
+    currentUser, logoutUser, isExpired, trialDays, trialExpirationDate, companyProfile, factories, isQuotaExceeded, poweredByProfile, retryCloudSync
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState<string>("orders");
@@ -123,7 +123,7 @@ function AppContent() {
           <div className="flex items-center gap-1.5 justify-between">
             <div className="flex flex-col">
               <h1 className="text-white font-bold text-lg tracking-tight leading-none">
-                {companyProfile.name ? companyProfile.name.trim().split(" ")[0].toUpperCase() : "PROPLAEX"}
+                {companyProfile.name ? companyProfile.name.trim().split(" ")[0].toUpperCase() : "PROPLANEX"}
               </h1>
               <span className="text-[9px] text-indigo-400 font-medium tracking-wide mt-1 uppercase">LIVE STATUS</span>
             </div>
@@ -266,14 +266,23 @@ function AppContent() {
                   <a href="https://firebase.google.com/pricing#cloud-firestore" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-650 font-bold">firebase.google.com/pricing</a>.
                 </p>
               </div>
-              <a
-                href="https://console.firebase.google.com/project/yarling-tributary-npwwt/firestore/databases/ai-studio-217663a1-6d18-4e57-8b8e-16475a1b7911/data?openUpgradeDialog=true"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-xl shrink-0 text-center transition-all duration-150 shadow-sm whitespace-nowrap inline-block hover:scale-102"
-              >
-                Upgrade Database 🚀
-              </a>
+              <div className="flex flex-col gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={retryCloudSync}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl text-center text-xs transition-all duration-150 shadow-sm whitespace-nowrap active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                >
+                  <span>Retry Sync</span> 🔄
+                </button>
+                <a
+                  href="https://console.firebase.google.com/project/yarling-tributary-npwwt/firestore/databases/ai-studio-217663a1-6d18-4e57-8b8e-16475a1b7911/data?openUpgradeDialog=true"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-xl text-center text-xs transition-all duration-150 shadow-sm whitespace-nowrap inline-block hover:scale-102"
+                >
+                  Upgrade Database 🚀
+                </a>
+              </div>
             </div>
           )}
           {renderActiveModule()}
