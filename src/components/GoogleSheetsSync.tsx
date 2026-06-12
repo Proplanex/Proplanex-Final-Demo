@@ -380,6 +380,49 @@ export default function GoogleSheetsSync() {
             </div>
           )}
 
+          {/* Quick Troubleshooting Guide to locate Sheets */}
+          <div className="p-4 bg-amber-50/50 border border-amber-200/60 rounded-xl space-y-3.5">
+            <div className="flex gap-2">
+              <HelpCircle className="h-4.5 w-4.5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">Can't Find Your Synced Sheets?</h4>
+                <p className="text-xs text-amber-855 leading-relaxed font-medium text-amber-800">
+                  Every time you sync, we create a fresh, full spreadsheet in the specific Google Drive with which you logged in: <span className="font-bold underline text-amber-950">{currentUser.email}</span>.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-amber-800/90 pl-6 space-y-2 list-none">
+              <div className="flex items-start gap-1.5">
+                <span className="text-amber-600 font-bold">•</span>
+                <p>Verify that your current browser tab is visiting Google Drive/Sheets while authenticated as <strong className="text-amber-950">{currentUser.email}</strong>. If you have multiple Google accounts, they might default to a different profile.</p>
+              </div>
+              <div className="flex items-start gap-1.5">
+                <span className="text-amber-600 font-bold">•</span>
+                <p>All created files begin with the prefix <strong className="text-amber-950 font-bold">"Proplaex ERP Master Database"</strong>.</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 pl-6 pt-1">
+              <a
+                href="https://drive.google.com/drive/search?q=Proplaex"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-650 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              >
+                Search Drive for 'Proplaex'
+              </a>
+              <a
+                href="https://docs.google.com/spreadsheets"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-amber-250 hover:bg-amber-50 text-amber-900 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              >
+                Go to Google Sheets
+              </a>
+            </div>
+          </div>
+
           {/* Critical Error view */}
           {errorMsg && (
             <div className="p-4 bg-red-50 border border-red-150 rounded-xl flex gap-2.5 animate-fadeIn text-red-900">
