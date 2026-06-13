@@ -539,15 +539,9 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
             {/* INSTRUCTIONS & BUTTONS IN THE POPUP MODAL */}
             <div className="sticky top-0 bg-white z-20 -mx-6 px-6 pt-1 pb-4 flex items-center justify-between no-print border-b border-slate-100 shadow-xs mb-4">
               <span className="text-xs font-mono font-semibold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full">
-                Manufacturing Job Ticket (PDF Exporter)
+                Manufacturing Job Ticket (Print Preview)
               </span>
               <div className="flex gap-2">
-                <button
-                  onClick={downloadPdfJobCard}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
-                >
-                  <Download className="h-4 w-4" /> Download PDF
-                </button>
                 <button
                   onClick={triggerPrintJobCard}
                   className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
@@ -576,7 +570,7 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
                       <span>{printError}</span>
                     ) : (
                       <span>
-                        Your web browser blocks print commands nested inside secure development iframes. To print or save files as PDF perfectly, please click <strong>"Open in New Tab" / "Open"</strong> at the top-right corner of the web simulator in AI Studio, or launch via the link below:
+                        Your web browser blocks print commands nested inside secure development iframes. To print or save files as PDF, please click <strong>"Open in New Tab" / "Open"</strong> at top right to open the standalone app, then print and select <strong>"Save as PDF"</strong> in your browser's print options.
                       </span>
                     )}
                   </p>

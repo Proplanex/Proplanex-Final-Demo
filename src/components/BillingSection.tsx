@@ -596,15 +596,9 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
           <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-3xl w-full p-6 space-y-6 relative print-invoice-card">
             <div className="sticky top-0 bg-white z-20 -mx-6 px-6 pt-1 pb-4 flex items-center justify-between no-print border-b border-slate-100 shadow-xs mb-4">
               <span className="text-xs font-mono font-semibold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full">
-                Invoice {activePrintBill.id} (Print & PDF)
+                Invoice {activePrintBill.id} (Print)
               </span>
               <div className="flex gap-2">
-                <button
-                  onClick={downloadPdfBill}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
-                >
-                  <FileDown className="h-4 w-4" /> Download PDF
-                </button>
                 <button
                   onClick={triggerPrintBill}
                   className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
@@ -632,7 +626,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
                     {printError ? (
                       <span>{printError}</span>
                     ) : (
-                      <span>To save files as vector PDF perfectly, please click <strong>"Download PDF"</strong> to save to your device directly.</span>
+                      <span>To print this invoice, please open the app in a standalone tab using the <strong>"Open"</strong> or <strong>"Open in New Tab"</strong> button in top-right corner, and then click <strong>"Print Bill"</strong>. From the browser dialog, you can choose <strong>"Save as PDF"</strong>.</span>
                     )}
                   </p>
                 </div>
