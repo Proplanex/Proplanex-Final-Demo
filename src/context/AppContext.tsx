@@ -195,96 +195,86 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         await validateFirestoreConnection();
 
-        // 1. Load configuration templates
-        const cProfile = await loadSharedSetting<CompanyProfile | null>("companyProfile", null);
-        if (cProfile) {
-          setCompanyProfile(cProfile);
-          lastCloudSyncedRef.current.companyProfile = JSON.stringify(cProfile);
-        }
+        // Check if the cloud database has already been seeded/initialized
+        const dbStatus = await loadSharedSetting<{ seeded: boolean } | null>("db_status", null);
+        const isSeededInCloud = dbStatus?.seeded || false;
 
-        const pProfile = await loadSharedSetting<PoweredByProfile | null>("poweredByProfile", null);
-        if (pProfile) {
-          setPoweredByProfile(pProfile);
-          lastCloudSyncedRef.current.poweredByProfile = JSON.stringify(pProfile);
-        }
+        if (isSeededInCloud) {
+          // 1. Load configuration templates
+          const cProfile = await loadSharedSetting<CompanyProfile | null>("companyProfile", null);
+          if (cProfile) {
+            setCompanyProfile(cProfile);
+            lastCloudSyncedRef.current.companyProfile = JSON.stringify(cProfile);
+          }
 
-        const tConfig = await loadSharedSetting<{ trialDays: string; trialExpirationDate: string | null } | null>("trialConfig", null);
-        if (tConfig) {
-          setTrialDays(tConfig.trialDays);
-          setTrialExpirationDate(tConfig.trialExpirationDate);
-          lastCloudSyncedRef.current.trialConfig = JSON.stringify({ trialDays: tConfig.trialDays, trialExpirationDate: tConfig.trialExpirationDate });
-        }
+          const pProfile = await loadSharedSetting<PoweredByProfile | null>("poweredByProfile", null);
+          if (pProfile) {
+            setPoweredByProfile(pProfile);
+            lastCloudSyncedRef.current.poweredByProfile = JSON.stringify(pProfile);
+          }
 
-        const sWebhook = await loadSharedSetting<{ webhookUrl: string } | null>("sheetsConfig", null);
-        if (sWebhook) {
-          setSheetsWebhookUrl(sWebhook.webhookUrl);
-          lastCloudSyncedRef.current.sheetsConfig = JSON.stringify({ webhookUrl: sWebhook.webhookUrl });
-        }
+          const tConfig = await loadSharedSetting<{ trialDays: string; trialExpirationDate: string | null } | null>("trialConfig", null);
+          if (tConfig) {
+            setTrialDays(tConfig.trialDays);
+            setTrialExpirationDate(tConfig.trialExpirationDate);
+            lastCloudSyncedRef.current.trialConfig = JSON.stringify({ trialDays: tConfig.trialDays, trialExpirationDate: tConfig.trialExpirationDate });
+          }
 
-        const gClientId = await loadSharedSetting<{ clientId: string } | null>("googleClientIdConfig", null);
-        if (gClientId) {
-          setGoogleClientId(gClientId.clientId);
-          localStorage.setItem("proplaex_google_client_id", gClientId.clientId);
-          lastCloudSyncedRef.current.googleClientIdConfig = JSON.stringify({ clientId: gClientId.clientId });
-        }
+          const sWebhook = await loadSharedSetting<{ webhookUrl: string } | null>("sheetsConfig", null);
+          if (sWebhook) {
+            setSheetsWebhookUrl(sWebhook.webhookUrl);
+            lastCloudSyncedRef.current.sheetsConfig = JSON.stringify({ webhookUrl: sWebhook.webhookUrl });
+          }
 
-        // 2. Load core entity registries
-        const cloudOrders = await fetchCollection<Order>("orders");
-        if (cloudOrders.length > 0) {
+          const gClientId = await loadSharedSetting<{ clientId: string } | null>("googleClientIdConfig", null);
+          if (gClientId) {
+            setGoogleClientId(gClientId.clientId);
+            localStorage.setItem("proplaex_google_client_id", gClientId.clientId);
+            lastCloudSyncedRef.current.googleClientIdConfig = JSON.stringify({ clientId: gClientId.clientId });
+          }
+
+          // 2. Load core entity registries (always load, even if empty)
+          const cloudOrders = await fetchCollection<Order>("orders");
           setOrders(cloudOrders);
           lastCloudSyncedRef.current.orders = JSON.stringify(cloudOrders);
-        }
 
-        const cloudYarn = await fetchCollection<YarnTransaction>("yarnTransactions");
-        if (cloudYarn.length > 0) {
+          const cloudYarn = await fetchCollection<YarnTransaction>("yarnTransactions");
           setYarnTransactions(cloudYarn);
           lastCloudSyncedRef.current.yarnTransactions = JSON.stringify(cloudYarn);
-        }
 
-        const cloudPlans = await fetchCollection<MachinePlan>("machinePlans");
-        if (cloudPlans.length > 0) {
+          const cloudPlans = await fetchCollection<MachinePlan>("machinePlans");
           setMachinePlans(cloudPlans);
           lastCloudSyncedRef.current.machinePlans = JSON.stringify(cloudPlans);
-        }
 
-        const cloudLogs = await fetchCollection<ProductionLog>("productionLogs");
-        if (cloudLogs.length > 0) {
+          const cloudLogs = await fetchCollection<ProductionLog>("productionLogs");
           setProductionLogs(cloudLogs);
           lastCloudSyncedRef.current.productionLogs = JSON.stringify(cloudLogs);
-        }
 
-        const cloudChallans = await fetchCollection<DeliveryChallan>("deliveryChallans");
-        if (cloudChallans.length > 0) {
+          const cloudChallans = await fetchCollection<DeliveryChallan>("deliveryChallans");
           setDeliveryChallans(cloudChallans);
           lastCloudSyncedRef.current.deliveryChallans = JSON.stringify(cloudChallans);
-        }
 
-        const cloudBills = await fetchCollection<BillRecord>("billRecords");
-        if (cloudBills.length > 0) {
+          const cloudBills = await fetchCollection<BillRecord>("billRecords");
           setBillRecords(cloudBills);
           lastCloudSyncedRef.current.billRecords = JSON.stringify(cloudBills);
-        }
 
-        const cloudMachines = await fetchCollection<MachineConfig>("machines");
-        if (cloudMachines.length > 0) {
+          const cloudMachines = await fetchCollection<MachineConfig>("machines");
           setMachines(cloudMachines);
           lastCloudSyncedRef.current.machines = JSON.stringify(cloudMachines);
-        }
 
-        const cloudFactories = await fetchCollection<RunningFactory>("factories");
-        if (cloudFactories.length > 0) {
+          const cloudFactories = await fetchCollection<RunningFactory>("factories");
           setFactories(cloudFactories);
           lastCloudSyncedRef.current.factories = JSON.stringify(cloudFactories);
-        }
 
-        const cloudUsers = await fetchCollection<AppUser>("users");
-        if (cloudUsers.length > 0) {
-          setUsers(cloudUsers);
-          lastCloudSyncedRef.current.users = JSON.stringify(cloudUsers);
-        }
+          const cloudUsers = await fetchCollection<AppUser>("users");
+          if (cloudUsers.length > 0) {
+            setUsers(cloudUsers);
+            lastCloudSyncedRef.current.users = JSON.stringify(cloudUsers);
+          } else {
+            lastCloudSyncedRef.current.users = JSON.stringify(users);
+          }
 
-        const cloudStatuses = await fetchCollection<{ id: string; status: string }>("machineStatuses");
-        if (cloudStatuses.length > 0) {
+          const cloudStatuses = await fetchCollection<{ id: string; status: string }>("machineStatuses");
           const statusMap: Record<string, string> = {};
           cloudStatuses.forEach(s => {
             statusMap[s.id] = s.status;
@@ -292,6 +282,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setMachineStatusMap(statusMap);
           const statusList = Object.entries(statusMap).map(([mNo, status]) => ({ id: mNo, status }));
           lastCloudSyncedRef.current.machineStatuses = JSON.stringify(statusList);
+        } else {
+          // Cloud database is empty or never seeded before. Seed it with CURRENT local state.
+          await saveSharedSetting("companyProfile", companyProfile);
+          lastCloudSyncedRef.current.companyProfile = JSON.stringify(companyProfile);
+
+          await saveSharedSetting("poweredByProfile", poweredByProfile);
+          lastCloudSyncedRef.current.poweredByProfile = JSON.stringify(poweredByProfile);
+
+          const tConfig = { trialDays, trialExpirationDate };
+          await saveSharedSetting("trialConfig", tConfig);
+          lastCloudSyncedRef.current.trialConfig = JSON.stringify(tConfig);
+
+          const sWebhook = { webhookUrl: sheetsWebhookUrl };
+          await saveSharedSetting("sheetsConfig", sWebhook);
+          lastCloudSyncedRef.current.sheetsConfig = JSON.stringify(sWebhook);
+
+          const gClientId = { clientId: googleClientId };
+          await saveSharedSetting("googleClientIdConfig", gClientId);
+          lastCloudSyncedRef.current.googleClientIdConfig = JSON.stringify(gClientId);
+
+          await saveBatchCollection("orders", orders, "orderNo");
+          lastCloudSyncedRef.current.orders = JSON.stringify(orders);
+
+          await saveBatchCollection("yarnTransactions", yarnTransactions, "id");
+          lastCloudSyncedRef.current.yarnTransactions = JSON.stringify(yarnTransactions);
+
+          await saveBatchCollection("machinePlans", machinePlans, "id");
+          lastCloudSyncedRef.current.machinePlans = JSON.stringify(machinePlans);
+
+          await saveBatchCollection("productionLogs", productionLogs, "id");
+          lastCloudSyncedRef.current.productionLogs = JSON.stringify(productionLogs);
+
+          await saveBatchCollection("deliveryChallans", deliveryChallans, "challanNo");
+          lastCloudSyncedRef.current.deliveryChallans = JSON.stringify(deliveryChallans);
+
+          await saveBatchCollection("billRecords", billRecords, "id");
+          lastCloudSyncedRef.current.billRecords = JSON.stringify(billRecords);
+
+          await saveBatchCollection("machines", machines, "machineNo");
+          lastCloudSyncedRef.current.machines = JSON.stringify(machines);
+
+          await saveBatchCollection("factories", factories, "name");
+          lastCloudSyncedRef.current.factories = JSON.stringify(factories);
+
+          await saveBatchCollection("users", users, "userId");
+          lastCloudSyncedRef.current.users = JSON.stringify(users);
+
+          const statusList = Object.entries(machineStatusMap).map(([mNo, status]) => ({ id: mNo, status }));
+          await saveBatchCollection("machineStatuses", statusList, "id");
+          lastCloudSyncedRef.current.machineStatuses = JSON.stringify(statusList);
+
+          // Mark as seeded in cloud
+          await saveSharedSetting("db_status", { seeded: true });
         }
 
         setIsCloudLoaded(true);
