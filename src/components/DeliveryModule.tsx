@@ -985,13 +985,19 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
             </div>
 
             {/* IFRAME PRINT NOTIFICATION (no-print) */}
-            {(window.self !== window.top || printError) && (
+            {(((window.self !== window.top) && (window.location.hostname.includes("run.app") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))) || printError) && (
               <div className="no-print p-4 bg-amber-50/90 border border-amber-200 rounded-xl flex items-start gap-3 text-xs text-amber-805 shadow-sm leading-relaxed">
                 <span className="text-lg select-none mt-0.5">⚠️</span>
                 <div className="space-y-1">
-                  <p className="font-semibold text-amber-900">Browser Security Restricts Printing inside Editor Sandbox</p>
+                  <p className="font-semibold text-amber-900">
+                    {printError ? "Print Capability Notice" : "Browser Security Restricts Printing inside Editor Sandbox"}
+                  </p>
                   <p className="text-amber-700 text-[11px]">
-                    To save files as vector PDF perfectly, please click <strong>"Download PDF"</strong> to save to your device directly.
+                    {printError ? (
+                      <span>{printError}</span>
+                    ) : (
+                      <span>To save files as vector PDF perfectly, please click <strong>"Download PDF"</strong> to save to your device directly.</span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -1088,6 +1094,18 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                         );
                       })}
                     </tbody>
+                    <tfoot className="border-t-2 border-slate-950 font-mono text-[11px] font-bold bg-slate-50/50">
+                      <tr className="border-b border-slate-950">
+                        <td colSpan={6} className="py-2.5 px-3 text-right font-sans border-r border-slate-950 font-bold text-slate-900">Total:</td>
+                        <td className="py-2.5 px-2 text-center border-r border-slate-950 text-slate-955 font-bold">
+                          {activePrintChallan.greyItems.reduce((acc, curr) => acc + (curr.roll || 0), 0)}
+                        </td>
+                        <td className="py-2.5 px-2 text-right border-r border-slate-950 text-slate-955 font-bold">
+                          {activePrintChallan.greyItems.reduce((acc, curr) => acc + (curr.qty || 0), 0).toLocaleString()}
+                        </td>
+                        <td className="py-2.5 px-3"></td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               ) : activePrintChallan.type === "Yarn Return" && activePrintChallan.yarnItems ? (
@@ -1123,6 +1141,17 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                         );
                       })}
                     </tbody>
+                    <tfoot className="font-mono text-[11px] font-bold bg-slate-50/50">
+                      <tr>
+                        <td colSpan={5} className="py-2.5 px-3 text-right font-sans border-r border-slate-950 font-bold text-slate-900">Total:</td>
+                        <td className="py-2.5 px-3 text-center border-r border-slate-950 text-slate-955 font-bold">
+                          {activePrintChallan.yarnItems.reduce((acc, curr) => acc + (curr.bag || 0), 0)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-slate-955 font-bold">
+                          {activePrintChallan.yarnItems.reduce((acc, curr) => acc + (curr.qty || 0), 0).toLocaleString()} Kg
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               ) : null}

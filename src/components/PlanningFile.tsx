@@ -564,22 +564,32 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
             </div>
 
             {/* IFRAME PRINT NOTIFICATION (no-print) */}
-            {(window.self !== window.top || printError) && (
+            {(((window.self !== window.top) && (window.location.hostname.includes("run.app") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))) || printError) && (
               <div className="no-print p-4 bg-amber-50/90 border border-amber-200 rounded-xl flex items-start gap-3 text-xs text-amber-800 shadow-sm leading-relaxed">
                 <span className="text-lg select-none mt-0.5">⚠️</span>
                 <div className="space-y-1">
-                  <p className="font-semibold text-amber-900">Browser Security Restricts Printing inside Editor Sandbox</p>
-                  <p className="text-amber-700 text-[11px]">
-                    Your web browser blocks print commands nested inside secure development iframes. To print or save files as PDF perfectly, please click <strong>"Open in New Tab" / "Open"</strong> at the top-right corner of the web simulator in AI Studio, or launch via the link below:
+                  <p className="font-semibold text-amber-900">
+                    {printError ? "Print Capability Notice" : "Browser Security Restricts Printing inside Editor Sandbox"}
                   </p>
-                  <a 
-                    href={window.location.href} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="inline-flex items-center gap-1 font-mono text-[10px] font-bold bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-2 uppercase tracking-wider cursor-pointer"
-                  >
-                    Open Standalone & Print <ExternalLink className="h-3 w-3" />
-                  </a>
+                  <p className="text-amber-700 text-[11px]">
+                    {printError ? (
+                      <span>{printError}</span>
+                    ) : (
+                      <span>
+                        Your web browser blocks print commands nested inside secure development iframes. To print or save files as PDF perfectly, please click <strong>"Open in New Tab" / "Open"</strong> at the top-right corner of the web simulator in AI Studio, or launch via the link below:
+                      </span>
+                    )}
+                  </p>
+                  {!printError && (
+                    <a 
+                      href={window.location.href} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="inline-flex items-center gap-1 font-mono text-[10px] font-bold bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-2 uppercase tracking-wider cursor-pointer"
+                    >
+                      Open Standalone & Print <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
                 </div>
               </div>
             )}
