@@ -122,26 +122,7 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
           </button>
         </form>
 
-        {/* Demo Credentials Footer info boxes */}
-        <div className="mt-8 pt-6 border-t border-slate-800/60 leading-relaxed text-[10px] text-slate-400 space-y-2">
-          <p className="font-bold text-slate-300">Quick Test Credentials Registry:</p>
-          <div className="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800/40 text-[9px] font-mono">
-            <div>
-              <p className="text-white font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span> Admin Login
-              </p>
-              <p className="text-slate-550 truncate mt-0.5">U: admin@proplanex.com</p>
-              <p className="text-slate-550">P: @Dmin123</p>
-            </div>
-            <div>
-              <p className="text-indigo-400 font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span> Superadmin
-              </p>
-              <p className="text-slate-550 mt-0.5">U: superadmin</p>
-              <p className="text-slate-550">P: Proplanex@Raihan</p>
-            </div>
-          </div>
-        </div>
+
       </div>
 
       <div className="mt-6 text-slate-550 text-[9px] font-mono tracking-widest text-center">
