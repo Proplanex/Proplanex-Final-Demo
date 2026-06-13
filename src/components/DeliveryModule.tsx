@@ -3,6 +3,7 @@ import { useAppState } from "../context/AppContext";
 import { Order, DeliveryChallan, GreyDeliveryItem, YarnReturnItem } from "../types";
 import { Plus, Search, FileText, Printer, FileDown, Trash2, HelpCircle, ExternalLink } from "lucide-react";
 import { downloadTableAsExcel } from "../utils/helpers";
+import { downloadElementAsPdf } from "../utils/pdfHelper";
 
 export function formatDateDDMMYYYY(dateStr: string): string {
   if (!dateStr) return "—";
@@ -60,6 +61,17 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
     } catch (err) {
       console.warn("Direct window.print() failed: ", err);
       setPrintError("Browser iframe print block detected. Please open the app in a standalone tab.");
+    }
+  };
+
+  const downloadPdfChallan = async () => {
+    if (!activePrintChallan) return;
+    try {
+      setPrintError(null);
+      await downloadElementAsPdf("delivery_challan_print_target", activePrintChallan.challanNo);
+    } catch (err) {
+      console.warn("Direct PDF export failed: ", err);
+      setPrintError("Direct PDF export failed. Try opening the app in a standalone tab.");
     }
   };
 
@@ -948,18 +960,18 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
           <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-3xl w-full p-6 space-y-6 relative print-invoice-card">
             <div className="sticky top-0 bg-white z-20 -mx-6 px-6 pt-1 pb-4 flex items-center justify-between no-print border-b border-slate-100 shadow-xs mb-4">
               <span className="text-xs font-mono font-semibold bg-sky-50 text-sky-700 px-3 py-1 rounded-full">
-                {activePrintChallan.type} Gatepass (Print Preview)
+                {activePrintChallan.type} Gatepass (Print & PDF)
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={triggerPrintChallan}
-                  className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                  onClick={downloadPdfChallan}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
                 >
                   <FileDown className="h-4 w-4" /> Download PDF
                 </button>
                 <button
                   onClick={triggerPrintChallan}
-                  className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+                  className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
                 >
                   <Printer className="h-4 w-4" /> Print Challan
                 </button>
@@ -979,22 +991,14 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                 <div className="space-y-1">
                   <p className="font-semibold text-amber-900">Browser Security Restricts Printing inside Editor Sandbox</p>
                   <p className="text-amber-700 text-[11px]">
-                    To save files as vector PDF perfectly, please click <strong>"Download PDF"</strong> and select <strong>"Save as PDF"</strong> as your printer destination. If blockages persist, open in a standalone tab:
+                    To save files as vector PDF perfectly, please click <strong>"Download PDF"</strong> to save to your device directly.
                   </p>
-                  <a 
-                    href={window.location.href} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="inline-flex items-center gap-1 font-mono text-[10px] font-bold bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-2 uppercase tracking-wider cursor-pointer"
-                  >
-                    Open Standalone & Save PDF <ExternalLink className="h-3 w-3" />
-                  </a>
                 </div>
               </div>
             )}
 
             {/* A4 TARGET LAYOUT FOR CHALLANS */}
-            <div className="space-y-6 text-slate-900 font-sans p-2 border border-slate-150 rounded-xl print:border-none print:p-0">
+            <div id="delivery_challan_print_target" className="space-y-6 text-slate-900 font-sans p-2 border border-slate-150 rounded-xl print:border-none print:p-0">
               {/* Profile Header */}
               <div className="flex items-center gap-4.5 pb-4 border-b border-slate-150">
                 {companyProfile.logoUrl && (

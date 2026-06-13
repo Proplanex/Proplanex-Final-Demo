@@ -52,6 +52,8 @@ interface AppContextType {
   addYarnTransaction: (tx: Omit<YarnTransaction, "id">) => void;
   deleteYarnTransaction: (id: string) => void;
   addMachinePlan: (plan: Omit<MachinePlan, "id" | "jobCardNo">) => void;
+  updateMachinePlan: (id: string, updatedFields: Partial<MachinePlan>) => void;
+  splitMachinePlan: (originalPlanId: string, originalNewQty: number, targetMachineNo: string, targetNewQty: number) => void;
   deleteMachinePlan: (id: string) => void;
   addProductionLog: (log: Omit<ProductionLog, "id">) => void;
   deleteProductionLog: (id: string) => void;
@@ -1161,6 +1163,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const updateMachinePlan = (id: string, updatedFields: Partial<MachinePlan>) => {
+    if (!canCurrentUserDeleteData()) {
+      alert("Unauthorized! Only Admin or Superadmin is allowed to change job cards.");
+      return;
+    }
+    setMachinePlans(prev => prev.map(p => {
+      if (p.id === id) {
+        let jobCardNo = p.jobCardNo;
+        if (updatedFields.machineNo && updatedFields.machineNo !== p.machineNo) {
+          const companyPart = companyProfile.name.substring(0, 3).toUpperCase();
+          const css = companyPart.length === 3 ? companyPart : "PRP";
+          const digitMatch = updatedFields.machineNo.match(/\d+/);
+          const machineDigit = digitMatch ? digitMatch[0] : "4";
+          
+          let maxSeq = 0;
+          prev.forEach(x => {
+            const numPart = x.jobCardNo.match(/\d+$/);
+            if (numPart) {
+              const seqVal = parseInt(numPart[0], 10);
+              const absoluteSeq = seqVal % 10000;
+              if (absoluteSeq > maxSeq) {
+                maxSeq = absoluteSeq;
+              }
+            }
+          });
+          const nextSeq = maxSeq + 1;
+          const formattedSeq = String(nextSeq).padStart(4, "0");
+          jobCardNo = `${css}M${machineDigit}${formattedSeq}`;
+        }
+        return { ...p, ...updatedFields, jobCardNo };
+      }
+      return p;
+    }));
+  };
+
+  const splitMachinePlan = (originalPlanId: string, originalNewQty: number, targetMachineNo: string, targetNewQty: number) => {
+    if (!canCurrentUserDeleteData()) {
+      alert("Unauthorized! Only Admin or Superadmin is allowed to change job cards.");
+      return;
+    }
+    const originalPlan = machinePlans.find(p => p.id === originalPlanId);
+    if (!originalPlan) return;
+
+    // 1. Update original plan quantity
+    setMachinePlans(prev => {
+      const idx = prev.findIndex(p => p.id === originalPlanId);
+      if (idx === -1) return prev;
+      const nextPlans = [...prev];
+      nextPlans[idx] = { ...nextPlans[idx], plannedQty: originalNewQty };
+      return nextPlans;
+    });
+
+    // 2. Add the split-off plan using addMachinePlan helper
+    addMachinePlan({
+      orderNo: originalPlan.orderNo,
+      planDate: originalPlan.planDate,
+      machineNo: targetMachineNo,
+      plannedQty: targetNewQty
+    });
+  };
+
   const addProductionLog = (log: Omit<ProductionLog, "id">) => {
     setProductionLogs(prev => {
       const generatedId = `PL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -1394,6 +1457,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addYarnTransaction,
       deleteYarnTransaction,
       addMachinePlan,
+      updateMachinePlan,
+      splitMachinePlan,
       deleteMachinePlan,
       addProductionLog,
       deleteProductionLog,

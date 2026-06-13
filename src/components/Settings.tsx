@@ -224,7 +224,7 @@ export default function SettingsSection({ readOnly = false }: SettingsProps) {
       )}
 
       {/* Google Sheets Sync Integration Panel */}
-      <GoogleSheetsSync />
+      {canCurrentUserDeleteData() && <GoogleSheetsSync />}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         

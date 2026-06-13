@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useAppState } from "../context/AppContext";
 import { Order, MachinePlan } from "../types";
-import { Search, Plus, Calendar, Settings, Printer, Scissors, HelpCircle, ChevronRight, CheckCircle, ExternalLink, Trash2 } from "lucide-react";
+import { Search, Plus, Calendar, Settings, Printer, Scissors, HelpCircle, ChevronRight, CheckCircle, ExternalLink, Trash2, Download } from "lucide-react";
 import { formatDateDDMMYYYY } from "./DeliveryModule";
+import { downloadElementAsPdf } from "../utils/pdfHelper";
 
 interface PlanningFileProps {
   readOnly?: boolean;
@@ -10,7 +11,7 @@ interface PlanningFileProps {
 
 export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
   const { 
-    orders, machinePlans, addMachinePlan, getPlannedQty, machines, companyProfile, poweredByProfile, deleteMachinePlan, canCurrentUserDeleteData 
+    orders, machinePlans, addMachinePlan, updateMachinePlan, splitMachinePlan, getPlannedQty, machines, companyProfile, poweredByProfile, deleteMachinePlan, canCurrentUserDeleteData 
   } = useAppState();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,6 +27,16 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
   const [activeJobCard, setActiveJobCard] = useState<MachinePlan | null>(null);
   const [activeJobCardOrder, setActiveJobCardOrder] = useState<Order | null>(null);
   const [printError, setPrintError] = useState<string | null>(null);
+
+  // Adjust/Split job card modal state
+  const [adjustingPlan, setAdjustingPlan] = useState<MachinePlan | null>(null);
+  const [adjustingOrder, setAdjustingOrder] = useState<Order | null>(null);
+  const [adjustMethod, setAdjustMethod] = useState<"edit" | "split">("edit");
+  const [adjustMachineNo, setAdjustMachineNo] = useState("");
+  const [adjustQty, setAdjustQty] = useState("");
+  const [splitTargetMachineNo, setSplitTargetMachineNo] = useState("");
+  const [splitKeepQty, setSplitKeepQty] = useState("");
+  const [splitGiveQty, setSplitGiveQty] = useState("");
 
   // Filters search by Order Number ONLY (pulls from Order Status)
   const filteredOrders = orders.filter(o => {
@@ -96,6 +107,107 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
     setActiveJobCardOrder(order);
   };
 
+  const handleOpenAdjustModal = (plan: MachinePlan, order: Order) => {
+    if (!canCurrentUserDeleteData()) {
+      alert("Unauthorized! Only Admin or Superadmin is allowed to change, adjust, or split job cards.");
+      return;
+    }
+    setAdjustingPlan(plan);
+    setAdjustingOrder(order);
+    setAdjustMethod("edit");
+    setAdjustMachineNo(plan.machineNo);
+    setAdjustQty(plan.plannedQty.toString());
+    
+    setSplitTargetMachineNo("");
+    const defaultSplit = (plan.plannedQty / 2);
+    setSplitKeepQty(defaultSplit.toString());
+    setSplitGiveQty(defaultSplit.toString());
+  };
+
+  const getMaxAllowedQty = (plan: MachinePlan, order: Order) => {
+    const totalPlanned = getPlannedQty(order.orderNo);
+    const balance = order.requiredQty - totalPlanned;
+    return plan.plannedQty + balance;
+  };
+
+  const handleSaveAdjustmentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adjustingPlan || !adjustingOrder) return;
+
+    if (adjustMethod === "edit") {
+      const enteredQty = Number(adjustQty);
+      if (!enteredQty || enteredQty <= 0) {
+        alert("Please enter a valid planned weight.");
+        return;
+      }
+
+      const maxLimit = getMaxAllowedQty(adjustingPlan, adjustingOrder);
+      if (enteredQty > maxLimit) {
+        alert(`Error: Quantity cannot exceed maximum permissible limit of ${maxLimit} Kg.`);
+        return;
+      }
+
+      if (!adjustMachineNo) {
+        alert("Please select a machine.");
+        return;
+      }
+
+      updateMachinePlan(adjustingPlan.id, {
+        machineNo: adjustMachineNo,
+        plannedQty: enteredQty
+      });
+
+      setAdjustingPlan(null);
+      setAdjustingOrder(null);
+    } else {
+      // Split
+      const keep = Number(splitKeepQty);
+      const give = Number(splitGiveQty);
+      const total = adjustingPlan.plannedQty;
+
+      if (!keep || keep <= 0 || !give || give <= 0) {
+        alert("Enter valid weights for both split portions.");
+        return;
+      }
+
+      if (Math.abs((keep + give) - total) > 0.01) {
+        alert(`Error: Sum of split portions (${keep + give} Kg) must exactly equal total quantity (${total} Kg).`);
+        return;
+      }
+
+      if (!splitTargetMachineNo) {
+        alert("Please select the target machine to route split capacity.");
+        return;
+      }
+
+      // Perform split
+      splitMachinePlan(adjustingPlan.id, keep, splitTargetMachineNo, give);
+
+      setAdjustingPlan(null);
+      setAdjustingOrder(null);
+    }
+  };
+
+  const handleSplitKeepChange = (val: string) => {
+    if (!adjustingPlan) return;
+    const total = adjustingPlan.plannedQty;
+    const num = Number(val);
+    setSplitKeepQty(val);
+    if (!isNaN(num) && num >= 0 && num <= total) {
+      setSplitGiveQty((total - num).toFixed(2));
+    }
+  };
+
+  const handleSplitGiveChange = (val: string) => {
+    if (!adjustingPlan) return;
+    const total = adjustingPlan.plannedQty;
+    const num = Number(val);
+    setSplitGiveQty(val);
+    if (!isNaN(num) && num >= 0 && num <= total) {
+      setSplitKeepQty((total - num).toFixed(2));
+    }
+  };
+
   const triggerPrintJobCard = () => {
     try {
       setPrintError(null);
@@ -104,6 +216,17 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
     } catch (err) {
       console.warn("Direct window.print() failed: ", err);
       setPrintError("Browser iframe print block detected. Please open the app in a standalone tab.");
+    }
+  };
+
+  const downloadPdfJobCard = async () => {
+    if (!activeJobCard) return;
+    try {
+      setPrintError(null);
+      await downloadElementAsPdf("jobcard_print_target", activeJobCard.jobCardNo);
+    } catch (err) {
+      console.warn("Direct PDF export failed: ", err);
+      setPrintError("Direct PDF export failed. Try opening the app in a standalone tab.");
     }
   };
 
@@ -190,7 +313,9 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
                         </td>
                         <td className="py-4 px-3 text-center">
                           {readOnly ? (
-                            <span className="text-[10px] font-mono text-slate-400 font-semibold italic">Read-Only</span>
+                            <span className="text-[10px] font-mono text-slate-400 font-semibold italic">
+                              Read-Only
+                            </span>
                           ) : planBalance > 0 ? (
                             <button
                               onClick={() => handleOpenAssignModal(order)}
@@ -252,12 +377,24 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
                                             <td className="py-2.5 px-3 text-right font-semibold text-slate-950">{plan.plannedQty.toLocaleString()} Kg</td>
                                             <td className="py-2.5 px-3 font-bold text-sky-800">{plan.jobCardNo}</td>
                                             <td className="py-2 px-3 text-center">
-                                              <button
-                                                onClick={() => handleViewJobCard(plan, order)}
-                                                className="bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 px-3 py-1 rounded text-[11px] font-semibold flex items-center gap-1 mx-auto cursor-pointer"
-                                              >
-                                                <Printer className="h-3.5 w-3.5" /> View Ticket
-                                              </button>
+                                              <div className="flex justify-center gap-1.5">
+                                                <button
+                                                  onClick={() => handleViewJobCard(plan, order)}
+                                                  className="bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded-[6px] text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                                                  title="Generate and print ticket"
+                                                >
+                                                  <Printer className="h-3 w-3" /> Ticket
+                                                </button>
+                                                {canCurrentUserDeleteData() && (
+                                                  <button
+                                                    onClick={() => handleOpenAdjustModal(plan, order)}
+                                                    className="bg-amber-50 border border-amber-100 hover:bg-amber-100 text-amber-700 px-2 py-1 rounded-[6px] text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                                                    title="Adjust or Split this Job Card (Admins Only)"
+                                                  >
+                                                    <Scissors className="h-3 w-3" /> Adjust/Split
+                                                  </button>
+                                                )}
+                                              </div>
                                             </td>
                                             {canCurrentUserDeleteData() && (
                                               <td className="py-2.5 px-3 text-center">
@@ -402,12 +539,18 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
             {/* INSTRUCTIONS & BUTTONS IN THE POPUP MODAL */}
             <div className="sticky top-0 bg-white z-20 -mx-6 px-6 pt-1 pb-4 flex items-center justify-between no-print border-b border-slate-100 shadow-xs mb-4">
               <span className="text-xs font-mono font-semibold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full">
-                Manufacturing Job Ticket (Print Preview)
+                Manufacturing Job Ticket (PDF Exporter)
               </span>
               <div className="flex gap-2">
                 <button
+                  onClick={downloadPdfJobCard}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                >
+                  <Download className="h-4 w-4" /> Download PDF
+                </button>
+                <button
                   onClick={triggerPrintJobCard}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+                  className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
                 >
                   <Printer className="h-4 w-4" /> Print Ticket
                 </button>
@@ -601,6 +744,222 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADJUST & SPLIT MACHINE PLAN MODAL */}
+      {adjustingPlan && adjustingOrder && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start justify-center p-4 z-50 overflow-y-auto pt-4 md:pt-10 pb-10">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden">
+            <div className="bg-slate-50 border-b border-slate-100 py-4 px-6 flex items-center justify-between">
+              <div>
+                <h3 className="font-sans font-semibold text-sm text-slate-800">Adjust / Split Job Card</h3>
+                <p className="text-[10px] text-slate-400 font-mono mt-0.5">Card No: {adjustingPlan.jobCardNo} | Order: {adjustingOrder.orderNo}</p>
+              </div>
+              <button 
+                onClick={() => { setAdjustingPlan(null); setAdjustingOrder(null); }} 
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* TAB SELECTION */}
+            <div className="flex border-b border-slate-100 bg-slate-50/50 p-1 m-4 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setAdjustMethod("edit")}
+                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  adjustMethod === "edit"
+                    ? "bg-white text-indigo-700 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                1. Change Machine / Quantity
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdjustMethod("split")}
+                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  adjustMethod === "split"
+                    ? "bg-white text-indigo-700 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                2. Divide & Split Job Card
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdjustmentSubmit} className="px-6 pb-6 space-y-4">
+              {adjustMethod === "edit" ? (
+                <>
+                  <div className="p-3.5 bg-sky-50/60 rounded-xl border border-sky-100/50 text-xs text-sky-800 space-y-1">
+                    <p className="font-semibold">Modify Existing Job Card</p>
+                    <p className="opacity-90">Change the machine partner or re-allocate planned capacity for this specific job card ticket.</p>
+                  </div>
+
+                  {/* Machine selection */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">
+                      Target Knitting Machine
+                    </label>
+                    {(() => {
+                      const targetDia = parseInt(adjustingOrder.diaGG.split("x")[0].trim(), 10);
+                      const matchingMachines = machines.filter(m => m.dia === targetDia);
+                      
+                      return (
+                        <select
+                          className="w-full p-2 border border-slate-200 rounded-xl text-sm bg-white"
+                          value={adjustMachineNo}
+                          onChange={(e) => setAdjustMachineNo(e.target.value)}
+                        >
+                          {matchingMachines.map((m, idx) => (
+                            <option key={idx} value={m.machineNo}>
+                              {m.machineNo} ({m.dia}" Dia x {m.gg} GG) - Matched
+                            </option>
+                          ))}
+                          {machines.filter(m => m.dia !== targetDia).map((m, idx) => (
+                            <option key={idx} value={m.machineNo} className="text-slate-400">
+                              {m.machineNo} ({m.dia}" Dia x {m.gg} GG) - Unmatched
+                            </option>
+                          ))}
+                        </select>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Quantity adjustment */}
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <label className="block text-xs font-medium text-slate-500">Planned Quantity (Kg)</label>
+                      <span className="text-xs font-semibold text-indigo-600">
+                        Max Allowed: {getMaxAllowedQty(adjustingPlan, adjustingOrder).toLocaleString()} Kg
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      required
+                      className="w-full p-2 border border-slate-200 rounded-xl text-sm font-semibold"
+                      value={adjustQty}
+                      onChange={(e) => setAdjustQty(e.target.value)}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-100/50 text-xs text-amber-800 space-y-1">
+                    <p className="font-semibold">Divide & Slice Job Card Capacity</p>
+                    <p className="opacity-90">
+                      Splits the current job card ({adjustingPlan.plannedQty} Kg) into 2. E.g. divide to original machine ({adjustingPlan.machineNo}) & another target machine.
+                    </p>
+                  </div>
+
+                  {/* Split distribution balanced inputs */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11.5px] font-medium text-slate-500 mb-1">
+                        Original Card ({adjustingPlan.machineNo}) Keep (Kg)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="any"
+                          required
+                          className="w-full p-2 pr-9 border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                          value={splitKeepQty}
+                          onChange={(e) => handleSplitKeepChange(e.target.value)}
+                        />
+                        <span className="absolute right-3 top-2 text-xs text-slate-400 font-mono">Kg</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11.5px] font-medium text-slate-500 mb-1">
+                        Split-off Card Send (Kg)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="any"
+                          required
+                          className="w-full p-2 pr-9 border border-slate-300 rounded-xl text-sm font-semibold text-indigo-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                          value={splitGiveQty}
+                          onChange={(e) => handleSplitGiveChange(e.target.value)}
+                        />
+                        <span className="absolute right-3 top-2 text-xs text-indigo-400 font-mono">Kg</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress visualization */}
+                  <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden flex">
+                    {(() => {
+                      const keep = Number(splitKeepQty) || 0;
+                      const give = Number(splitGiveQty) || 0;
+                      const tot = adjustingPlan.plannedQty;
+                      const keepPct = Math.min(100, Math.max(0, (keep / tot) * 100));
+                      const givePct = Math.min(100, Math.max(0, (give / tot) * 100));
+                      return (
+                        <>
+                          <div style={{ width: `${keepPct}%` }} className="bg-amber-400 transition-all" />
+                          <div style={{ width: `${givePct}%` }} className="bg-indigo-600 transition-all" />
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Target Machine Selection for split-off */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">
+                      Route Split-off Capacity to Machine No:
+                    </label>
+                    {(() => {
+                      const targetDia = parseInt(adjustingOrder.diaGG.split("x")[0].trim(), 10);
+                      const matchingMachines = machines.filter(m => m.dia === targetDia && m.machineNo !== adjustingPlan.machineNo);
+                      
+                      return (
+                        <select
+                          className="w-full p-2 border border-slate-200 rounded-xl text-sm bg-white"
+                          value={splitTargetMachineNo}
+                          onChange={(e) => setSplitTargetMachineNo(e.target.value)}
+                          required
+                        >
+                          <option value="">-- Choose Target Machine --</option>
+                          {matchingMachines.map((m, idx) => (
+                            <option key={idx} value={m.machineNo}>
+                              {m.machineNo} ({m.dia}" Dia x {m.gg} GG) - Matched Partner
+                            </option>
+                          ))}
+                          {machines.filter(m => m.dia !== targetDia || m.machineNo === adjustingPlan.machineNo).map((m, idx) => (
+                            <option key={idx} value={m.machineNo} className="text-slate-400">
+                              {m.machineNo} ({m.dia}" Dia x {m.gg} GG) - Unmatched/Self
+                            </option>
+                          ))}
+                        </select>
+                      );
+                    })()}
+                  </div>
+                </>
+              )}
+
+              {/* ACTIONS */}
+              <div className="border-t border-slate-100 pt-4 flex items-center justify-end gap-3 text-xs">
+                <button
+                  type="button"
+                  onClick={() => { setAdjustingPlan(null); setAdjustingOrder(null); }}
+                  className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+                >
+                  Confirm & Apply Adjustment
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
