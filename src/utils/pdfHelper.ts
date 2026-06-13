@@ -116,6 +116,8 @@ export const replaceOklchInString = (cssText: string): string => {
  * High-quality PDF downloader utilizing element canvas image generation in jsPDF.
  */
 export const downloadElementAsPdf = async (elementId: string, filename: string) => {
+  let originalScrollX = 0;
+  let originalScrollY = 0;
   try {
     // 1. Wait a moment to ensure state changes/renders are fully painted
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -127,17 +129,20 @@ export const downloadElementAsPdf = async (elementId: string, filename: string) 
 
     const pdfFilename = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
 
-    // 2. Generate high-resolution canvas with CORS configurations
+    // 2. Temporarily scroll the window to the top to prevent scroll offset issues in html2canvas
+    originalScrollX = window.scrollX;
+    originalScrollY = window.scrollY;
+    window.scrollTo(0, 0);
+
+    // 3. Generate high-resolution canvas with CORS configuration and taint protection
     const canvas = await html2canvas(element, {
       scale: 2, // 2x scale for high resolution crisp rendering
       useCORS: true,
-      allowTaint: true,
+      allowTaint: false, // CRITICAL: Setting this to false prevents tainted canvases when using cross-origin images (like custom logo/QR server), allowing canvas.toDataURL() to output the graphics correctly instead of empty/blank!
       logging: false,
       backgroundColor: "#ffffff",
       scrollX: 0,
       scrollY: 0,
-      windowWidth: element.scrollWidth,
-      windowHeight: element.scrollHeight,
       onclone: (clonedDoc: Document) => {
         // Correct OKLCH style elements
         const styles = clonedDoc.getElementsByTagName("style");
@@ -159,6 +164,9 @@ export const downloadElementAsPdf = async (elementId: string, filename: string) 
         }
       }
     });
+
+    // Restore scroll position immediately after canvas generation completes
+    window.scrollTo(originalScrollX, originalScrollY);
 
     const imgData = canvas.toDataURL("image/jpeg", 0.95);
 
@@ -198,6 +206,9 @@ export const downloadElementAsPdf = async (elementId: string, filename: string) 
     // Save output PDF file
     pdf.save(pdfFilename);
   } catch (error) {
+    try {
+      window.scrollTo(originalScrollX, originalScrollY);
+    } catch (_) {}
     console.error("PDF generation failed:", error);
     throw error;
   }
