@@ -6,8 +6,9 @@ import firebaseConfig from "../../firebase-applet-config.json";
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true
-}, firebaseConfig.firestoreDatabaseId);
+  experimentalForceLongPolling: true,
+  useFetchStreams: false
+} as any, firebaseConfig.firestoreDatabaseId);
 
 const provider = new GoogleAuthProvider();
 // Google Sheets API full write scope

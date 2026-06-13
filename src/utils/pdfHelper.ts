@@ -118,6 +118,8 @@ export const replaceOklchInString = (cssText: string): string => {
 export const downloadElementAsPdf = async (elementId: string, filename: string) => {
   let originalScrollX = 0;
   let originalScrollY = 0;
+  const scrollStates: { el: HTMLElement; top: number; left: number }[] = [];
+
   try {
     // 1. Wait a moment to ensure state changes/renders are fully painted
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -129,21 +131,60 @@ export const downloadElementAsPdf = async (elementId: string, filename: string) 
 
     const pdfFilename = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
 
-    // 2. Temporarily scroll the window to the top to prevent scroll offset issues in html2canvas
-    originalScrollX = window.scrollX;
-    originalScrollY = window.scrollY;
+    // 2. Capture and reset scroll positions of window and all parent elements
+    originalScrollX = window.scrollX || window.pageXOffset || 0;
+    originalScrollY = window.scrollY || window.pageYOffset || 0;
+
+    let current: HTMLElement | null = element;
+    while (current) {
+      if (current.scrollTop > 0 || current.scrollLeft > 0) {
+        scrollStates.push({
+          el: current,
+          top: current.scrollTop,
+          left: current.scrollLeft
+        });
+        current.scrollTop = 0;
+        current.scrollLeft = 0;
+      }
+      current = current.parentElement;
+    }
+
+    // Scroll window to top
     window.scrollTo(0, 0);
+
+    // Wait a brief tick for browser layout update after scroll-resetting
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // 3. Generate high-resolution canvas with CORS configuration and taint protection
     const canvas = await html2canvas(element, {
       scale: 2, // 2x scale for high resolution crisp rendering
       useCORS: true,
-      allowTaint: false, // CRITICAL: Setting this to false prevents tainted canvases when using cross-origin images (like custom logo/QR server), allowing canvas.toDataURL() to output the graphics correctly instead of empty/blank!
+      allowTaint: false, // CRITICAL: Setting this to false prevents tainted canvases when using cross-origin images, allowing canvas.toDataURL() to output the graphics correctly instead of empty/blank!
       logging: false,
       backgroundColor: "#ffffff",
       scrollX: 0,
       scrollY: 0,
+      width: element.scrollWidth,
+      height: element.scrollHeight,
+      windowWidth: document.documentElement.clientWidth,
+      windowHeight: document.documentElement.clientHeight,
       onclone: (clonedDoc: Document) => {
+        // Ensure the cloned target and its parents have unrestricted overflow and height in cloned DOM
+        const clonedTarget = clonedDoc.getElementById(elementId);
+        if (clonedTarget) {
+          clonedTarget.style.setProperty("height", "auto", "important");
+          clonedTarget.style.setProperty("max-height", "none", "important");
+          clonedTarget.style.setProperty("overflow", "visible", "important");
+          
+          let parent = clonedTarget.parentElement;
+          while (parent && parent !== clonedDoc.body) {
+            parent.style.setProperty("overflow", "visible", "important");
+            parent.style.setProperty("max-height", "none", "important");
+            parent.style.setProperty("height", "auto", "important");
+            parent = parent.parentElement;
+          }
+        }
+
         // Correct OKLCH style elements
         const styles = clonedDoc.getElementsByTagName("style");
         for (let i = 0; i < styles.length; i++) {
@@ -165,12 +206,18 @@ export const downloadElementAsPdf = async (elementId: string, filename: string) 
       }
     });
 
-    // Restore scroll position immediately after canvas generation completes
+    // 4. Restore scroll states of ancestors and window immediately after capture
+    for (const state of scrollStates) {
+      try {
+        state.el.scrollTop = state.top;
+        state.el.scrollLeft = state.left;
+      } catch (_) {}
+    }
     window.scrollTo(originalScrollX, originalScrollY);
 
     const imgData = canvas.toDataURL("image/jpeg", 0.95);
 
-    // 3. Create PDF file (Standard Letter size: 8.5 x 11 inches)
+    // 5. Create PDF file (Standard Letter size: 8.5 x 11 inches)
     const pdf = new jsPDF({
       orientation: "portrait",
       unit: "in",
@@ -206,6 +253,13 @@ export const downloadElementAsPdf = async (elementId: string, filename: string) 
     // Save output PDF file
     pdf.save(pdfFilename);
   } catch (error) {
+    // Restore scroll positions even on failure
+    for (const state of scrollStates) {
+      try {
+        state.el.scrollTop = state.top;
+        state.el.scrollLeft = state.left;
+      } catch (_) {}
+    }
     try {
       window.scrollTo(originalScrollX, originalScrollY);
     } catch (_) {}
