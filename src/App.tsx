@@ -242,8 +242,8 @@ function AppContent() {
             </div>
 
             {trialExpirationDate && (
-              <div className="hidden lg:flex items-center gap-1 bg-indigo-50 text-indigo-700 px-3 py-1 rounded-lg border border-indigo-100 font-mono text-[10px]">
-                <ShieldCheck className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-1 bg-rose-50 text-rose-700 px-3 py-1 rounded-lg border border-rose-100 font-mono text-[10px] animate-pulse">
+                <ShieldCheck className="h-3.5 w-3.5 text-rose-600" />
                 <span>Expires: {trialExpirationDate}</span>
               </div>
             )}

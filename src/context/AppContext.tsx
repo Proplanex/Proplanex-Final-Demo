@@ -15,6 +15,8 @@ import {
   fetchCollection,
   saveBatchCollection
 } from "../utils/firebaseFirestoreService";
+import { doc, collection, onSnapshot } from "firebase/firestore";
+import { db } from "../utils/firebaseAuth";
 
 interface AppContextType {
   orders: Order[];
@@ -349,6 +351,121 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     initCloudAndSync();
   }, [syncTrigger]);
+
+  // Real-time Cloud Observers for Multi-Platform/Multi-PC synchronization
+  useEffect(() => {
+    if (!isCloudLoaded || isQuotaExceeded) return;
+
+    const unsubscribes: (() => void)[] = [];
+
+    // Helper to safely verify and register snapshots for settings documents
+    const listenDoc = (docKey: string, keyName: string, setStateFn: (val: any) => void) => {
+      const docRef = doc(db, "workspace_info", docKey);
+      const unsub = onSnapshot(docRef, (snapshot) => {
+        if (!snapshot.exists()) return;
+        const data = snapshot.data();
+        const serialized = JSON.stringify(data);
+        if (serialized !== lastCloudSyncedRef.current[keyName]) {
+          lastCloudSyncedRef.current[keyName] = serialized;
+          setStateFn(data);
+        }
+      }, (err) => {
+        console.error(`Real-time listen for ${docKey} doc failed:`, err);
+      });
+      unsubscribes.push(unsub);
+    };
+
+    // 1. Single workspace configurations
+    listenDoc("companyProfile", "companyProfile", setCompanyProfile);
+    listenDoc("poweredByProfile", "poweredByProfile", setPoweredByProfile);
+    listenDoc("sheetsConfig", "sheetsConfig", (data) => setSheetsWebhookUrl(data?.webhookUrl || ""));
+    listenDoc("googleClientIdConfig", "googleClientIdConfig", (data) => setGoogleClientId(data?.clientId || ""));
+
+    // Trial limit has a custom handler due to multiple linked state variables
+    const trialDocRef = doc(db, "workspace_info", "trialConfig");
+    const unsubTrial = onSnapshot(trialDocRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.data() as { trialDays: string; trialExpirationDate: string | null };
+      const serialized = JSON.stringify(data);
+      if (serialized !== lastCloudSyncedRef.current.trialConfig) {
+        lastCloudSyncedRef.current.trialConfig = serialized;
+        setTrialDays(data.trialDays || "No Limit");
+        setTrialExpirationDate(data.trialExpirationDate || null);
+      }
+    }, (err) => {
+      console.error("Real-time listen for trialConfig failed:", err);
+    });
+    unsubscribes.push(unsubTrial);
+
+    // 2. Collection observers mapped to set states
+    const listenCollection = <T extends any>(
+      colName: string,
+      idKey: string,
+      setStateFn: (val: T[]) => void,
+      lastSyncedKey: string
+    ) => {
+      const colRef = collection(db, colName);
+      const unsub = onSnapshot(colRef, (snapshot) => {
+        const list: T[] = [];
+        snapshot.forEach((doc) => {
+          list.push(doc.data() as T);
+        });
+
+        // Stabilize sorting to prevent random diff loops
+        list.sort((a: any, b: any) => {
+          const valA = String(a[idKey] || a.id || "");
+          const valB = String(b[idKey] || b.id || "");
+          return valA.localeCompare(valB);
+        });
+
+        const serialized = JSON.stringify(list);
+        if (serialized !== lastCloudSyncedRef.current[lastSyncedKey]) {
+          lastCloudSyncedRef.current[lastSyncedKey] = serialized;
+          setStateFn(list);
+        }
+      }, (err) => {
+        console.error(`Real-time listen for ${colName} collection failed:`, err);
+      });
+      unsubscribes.push(unsub);
+    };
+
+    listenCollection<Order>("orders", "orderNo", setOrders, "orders");
+    listenCollection<YarnTransaction>("yarnTransactions", "id", setYarnTransactions, "yarnTransactions");
+    listenCollection<MachinePlan>("machinePlans", "id", setMachinePlans, "machinePlans");
+    listenCollection<ProductionLog>("productionLogs", "id", setProductionLogs, "productionLogs");
+    listenCollection<DeliveryChallan>("deliveryChallans", "challanNo", setDeliveryChallans, "deliveryChallans");
+    listenCollection<BillRecord>("billRecords", "id", setBillRecords, "billRecords");
+    listenCollection<MachineConfig>("machines", "machineNo", setMachines, "machines");
+    listenCollection<RunningFactory>("factories", "name", setFactories, "factories");
+    listenCollection<AppUser>("users", "userId", setUsers, "users");
+
+    // Machine Status Map requires parsing the live state list back to dictionary
+    const statusColRef = collection(db, "machineStatuses");
+    const unsubStatus = onSnapshot(statusColRef, (snapshot) => {
+      const statusMap: Record<string, string> = {};
+      const statusList: { id: string; status: string }[] = [];
+      snapshot.forEach((doc) => {
+        const item = doc.data() as { id: string; status: string };
+        statusMap[item.id] = item.status;
+        statusList.push(item);
+      });
+
+      // Sort to stabilize comparison
+      statusList.sort((a, b) => a.id.localeCompare(b.id));
+      const serialized = JSON.stringify(statusList);
+      if (serialized !== lastCloudSyncedRef.current.machineStatuses) {
+        lastCloudSyncedRef.current.machineStatuses = serialized;
+        setMachineStatusMap(statusMap);
+      }
+    }, (err) => {
+      console.error("Real-time listen for machineStatuses failed:", err);
+    });
+    unsubscribes.push(unsubStatus);
+
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+    };
+  }, [isCloudLoaded, isQuotaExceeded]);
 
   // Read state from LocalStorage or seed with defaults
   const [orders, setOrders] = useState<Order[]>(() => {
