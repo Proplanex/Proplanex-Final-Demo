@@ -1,19 +1,5 @@
-/**
- * Dynamically loads html2pdf.js from CDN and exports a download utility.
- */
-export const loadHtml2Pdf = () => {
-  return new Promise<any>((resolve, reject) => {
-    if ((window as any).html2pdf) {
-      resolve((window as any).html2pdf);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-    script.onload = () => resolve((window as any).html2pdf);
-    script.onerror = (err) => reject(err);
-    document.body.appendChild(script);
-  });
-};
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 
 /**
  * Parses percent or regular numeric values.
@@ -126,54 +112,91 @@ export const replaceOklchInString = (cssText: string): string => {
   });
 };
 
+/**
+ * High-quality PDF downloader utilizing element canvas image generation in jsPDF.
+ */
 export const downloadElementAsPdf = async (elementId: string, filename: string) => {
   try {
-    // 1. Wait a moment to ensure that any state changes/modals are fully painted
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    // 1. Wait a moment to ensure state changes/renders are fully painted
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const html2pdf = await loadHtml2Pdf();
     const element = document.getElementById(elementId);
     if (!element) {
       throw new Error(`Element with id ${elementId} not found`);
     }
 
-    // Configure options for a polished look matching A4/Letter layout
-    const opt = {
-      margin:       [0.3, 0.3, 0.3, 0.3], // top, left, bottom, right
-      filename:     filename.endsWith(".pdf") ? filename : `${filename}.pdf`,
-      image:        { type: "jpeg", quality: 0.98 },
-      html2canvas:  { 
-        scale: 2, 
-        useCORS: true, 
-        letterRendering: true,
-        scrollX: 0,
-        scrollY: 0,
-        // Intercept cloned tree and filter oklch styles
-        onclone: (clonedDoc: Document) => {
-          // Preprocess all style elements in the clone
-          const styles = clonedDoc.getElementsByTagName("style");
-          for (let i = 0; i < styles.length; i++) {
-            const style = styles[i];
-            if (style.innerHTML && style.innerHTML.includes("oklch")) {
-              style.innerHTML = replaceOklchInString(style.innerHTML);
-            }
-          }
+    const pdfFilename = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
 
-          // Preprocess style attributes in individual elements
-          const allElements = clonedDoc.getElementsByTagName("*");
-          for (let i = 0; i < allElements.length; i++) {
-            const el = allElements[i];
-            const styleAttr = el.getAttribute("style");
-            if (styleAttr && styleAttr.includes("oklch")) {
-              el.setAttribute("style", replaceOklchInString(styleAttr));
-            }
+    // 2. Generate high-resolution canvas with CORS configurations
+    const canvas = await html2canvas(element, {
+      scale: 2, // 2x scale for high resolution crisp rendering
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: element.scrollWidth,
+      windowHeight: element.scrollHeight,
+      onclone: (clonedDoc: Document) => {
+        // Correct OKLCH style elements
+        const styles = clonedDoc.getElementsByTagName("style");
+        for (let i = 0; i < styles.length; i++) {
+          const style = styles[i];
+          if (style.innerHTML && style.innerHTML.includes("oklch")) {
+            style.innerHTML = replaceOklchInString(style.innerHTML);
           }
         }
-      },
-      jsPDF:        { unit: "in", format: "letter", orientation: "portrait" }
-    };
 
-    await html2pdf().set(opt).from(element).save();
+        // Correct inline OKLCH style attributes
+        const allElements = clonedDoc.getElementsByTagName("*");
+        for (let i = 0; i < allElements.length; i++) {
+          const el = allElements[i];
+          const styleAttr = el.getAttribute("style");
+          if (styleAttr && styleAttr.includes("oklch")) {
+            el.setAttribute("style", replaceOklchInString(styleAttr));
+          }
+        }
+      }
+    });
+
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+    // 3. Create PDF file (Standard Letter size: 8.5 x 11 inches)
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "in",
+      format: "letter"
+    });
+
+    const pageWidth = 8.5;
+    const pageHeight = 11;
+    const margin = 0.3; // matches initial 0.3in margins
+    const contentWidth = pageWidth - (margin * 2); // 7.9 in
+
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+
+    // Maintain natural aspect ratio of the captured canvas element
+    const contentHeight = (imgHeight * contentWidth) / imgWidth;
+
+    let heightLeft = contentHeight;
+    let position = margin;
+
+    // Render the canvas on the first page
+    pdf.addImage(imgData, "JPEG", margin, position, contentWidth, contentHeight, undefined, "FAST");
+    heightLeft -= (pageHeight - (margin * 2));
+
+    // Handle seamless multi-page paging
+    while (heightLeft > 0) {
+      position = heightLeft - contentHeight + margin;
+      pdf.addPage();
+      pdf.addImage(imgData, "JPEG", margin, position, contentWidth, contentHeight, undefined, "FAST");
+      heightLeft -= (pageHeight - (margin * 2));
+    }
+
+    // Save output PDF file
+    pdf.save(pdfFilename);
   } catch (error) {
     console.error("PDF generation failed:", error);
     throw error;
