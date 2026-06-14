@@ -960,7 +960,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ]);
 
   useEffect(() => {
-    if (trialDays === "No Limit" || !trialExpirationDate) {
+    // If cloud settings are still synchronizing, wait with expiration evaluation
+    // to prevent local-storage caching from flashing a stale expired screen.
+    if (!isCloudLoaded) {
+      setIsExpired(false);
+      return;
+    }
+
+    const isNoLimit = !trialDays || trialDays.trim().toLowerCase() === "no-limit" || trialDays.trim().toLowerCase() === "no limit";
+    if (isNoLimit || !trialExpirationDate) {
       setIsExpired(false);
       return;
     }
@@ -980,7 +988,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     checkExpiration();
     const interval = setInterval(checkExpiration, 60000); // Check once a minute
     return () => clearInterval(interval);
-  }, [trialDays, trialExpirationDate]);
+  }, [trialDays, trialExpirationDate, isCloudLoaded]);
 
   // CALCULATION HELPERS
   const getYarnReceived = (orderNo: string): number => {
@@ -1442,7 +1450,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateTrialLimit = (days: string) => {
     setTrialDays(days);
     localStorage.setItem("pro_trial_days", days);
-    if (days === "No Limit") {
+    const cleanedDays = days ? days.trim().toLowerCase() : "";
+    if (cleanedDays === "no-limit" || cleanedDays === "no limit" || !days) {
       setTrialExpirationDate(null);
       localStorage.removeItem("pro_trial_expiration");
     } else {
