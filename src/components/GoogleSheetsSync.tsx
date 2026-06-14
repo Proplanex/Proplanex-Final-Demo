@@ -278,7 +278,7 @@ export default function GoogleSheetsSync() {
         setTestWebhookResult(`Failed to connect (HTTP status: ${res.status}). Verify your script is authorized and deployed for 'Anyone'.`);
       }
     } catch (e: any) {
-      console.error(e);
+      console.warn(e);
       setTestWebhookResult(`Connection failed: ${e.message || e}. Double-check that Web App CORS options are configured for 'Anyone' access.`);
     } finally {
       setIsTestingWebhook(false);

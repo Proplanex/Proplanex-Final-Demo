@@ -63,7 +63,7 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
             <AlertCircle className="h-4.5 w-4.5 text-red-400 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold">License Working Limit Exceeded</p>
-              <p className="opacity-80 mt-0.5">Your trial session has been expired. Only the <strong className="text-white underline">superadmin</strong> can log in to extend or renew the workspace duration.</p>
+              <p className="opacity-80 mt-0.5">Your trial session has been expired. Please contact with your supplier to renew the session.</p>
             </div>
           </div>
         )}

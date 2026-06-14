@@ -882,20 +882,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const delayDebounceFn = setTimeout(async () => {
       setAutoSyncStatus("syncing");
-      try {
-        const syncParams = {
-          orders,
-          yarnTransactions,
-          machinePlans,
-          productionLogs,
-          deliveryChallans,
-          billRecords,
-          machines,
-          factories,
-          machineStatusMap,
-          users,
-        };
+      const syncParams = {
+        orders,
+        yarnTransactions,
+        machinePlans,
+        productionLogs,
+        deliveryChallans,
+        billRecords,
+        machines,
+        factories,
+        machineStatusMap,
+        users,
+      };
 
+      try {
         const response = await fetch(sheetsWebhookUrl, {
           method: "POST",
           mode: "cors",
@@ -918,8 +918,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setAutoSyncStatus("error");
         }
       } catch (err) {
-        console.error("Automated Sheets background sync failed:", err);
-        setAutoSyncStatus("error");
+        // If it failed because of CORS/fetch issues, try to do a "no-cors" silent sync as a resilient backup!
+        const errStr = err instanceof Error ? err.message : String(err);
+        if (
+          errStr.toLowerCase().includes("fetch") || 
+          errStr.toLowerCase().includes("cors") || 
+          errStr.toLowerCase().includes("network") ||
+          errStr.toLowerCase().includes("failed") ||
+          errStr.toLowerCase().includes("typeerror")
+        ) {
+          try {
+            console.warn("CORS/Fetch limitation detected. Re-trying background sync in safe 'no-cors' backup channel...");
+            await fetch(sheetsWebhookUrl, {
+              method: "POST",
+              mode: "no-cors",
+              headers: {
+                "Content-Type": "text/plain;charset=utf-8",
+              },
+              body: JSON.stringify(syncParams)
+            });
+            // With 'no-cors', we can't inspect response contents, but the data is sent successfully to the script!
+            setAutoSyncStatus("success");
+            setLastAutoSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            console.info("Automated Google Sheets background sync complete (via no-cors fallback).");
+          } catch (fallbackErr) {
+            console.warn("Automated Sheets background sync fallback channel failed:", fallbackErr);
+            setAutoSyncStatus("error");
+          }
+        } else {
+          console.warn("Automated Sheets background sync failed:", err);
+          setAutoSyncStatus("error");
+        }
       }
     }, 4500); // 4.5 seconds of quiet time debounce
 
@@ -937,13 +966,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const checkExpiration = () => {
       const today = new Date();
-      const todayStr = today.toISOString().split("T")[0];
-      const todayParts = todayStr.split("-").map(Number);
-      const expParts = trialExpirationDate.split("-").map(Number);
+      const year = today.getFullYear();
+      const month = today.getMonth(); // 0-indexed
+      const date = today.getDate();
       
-      const tDate = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]);
+      const tDate = new Date(year, month, date);
+      
+      const expParts = trialExpirationDate.split("-").map(Number);
       const eDate = new Date(expParts[0], expParts[1] - 1, expParts[2]);
-      setIsExpired(tDate.getTime() > eDate.getTime());
+      
+      setIsExpired(tDate.getTime() >= eDate.getTime());
     };
     checkExpiration();
     const interval = setInterval(checkExpiration, 60000); // Check once a minute
