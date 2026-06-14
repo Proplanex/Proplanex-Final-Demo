@@ -15,6 +15,7 @@ export interface Order {
   color: string;
   finishGSM: number;
   finishDia: number;
+  knitType?: "Needle Open" | "Blade Open" | "Tube" | "";
   factoryJobNo: string;
   rate: number;
   requiredQty: number;

@@ -47,6 +47,7 @@ interface AppContextType {
 
   // State Mutators
   addOrder: (order: Omit<Order, "orderNo" | "status">) => void;
+  updateOrder: (order: Order) => void;
   deleteOrder: (orderNo: string) => void;
   updateOrderStatus: (orderNo: string, status: Order["status"], manualOverride: boolean) => void;
   addYarnTransaction: (tx: Omit<YarnTransaction, "id">) => void;
@@ -1322,6 +1323,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const updateOrder = (order: Order) => {
+    if (!checkDeletePermission()) return;
+    setOrders(prev => prev.map(o => o.orderNo === order.orderNo ? order : o));
+  };
+
   const deleteOrder = (orderNo: string) => {
     if (!checkDeletePermission()) return;
     setOrders(prev => prev.filter(o => o.orderNo !== orderNo));
@@ -1493,6 +1499,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateTrialLimit,
       
       addOrder,
+      updateOrder,
       deleteOrder,
       updateOrderStatus,
       addYarnTransaction,

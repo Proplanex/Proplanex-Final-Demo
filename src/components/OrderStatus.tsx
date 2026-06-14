@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAppState } from "../context/AppContext";
 import { Order } from "../types";
-import { Plus, Search, ChevronDown, ChevronUp, AlertCircle, Sparkles, Filter, Trash2 } from "lucide-react";
+import { Plus, Search, ChevronDown, ChevronUp, AlertCircle, Sparkles, Filter, Trash2, Edit } from "lucide-react";
 
 interface OrderStatusProps {
   readOnly?: boolean;
@@ -9,7 +9,7 @@ interface OrderStatusProps {
 
 export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
   const { 
-    orders, addOrder, getPlannedQty, getYarnReceived, 
+    orders, addOrder, updateOrder, getPlannedQty, getYarnReceived, 
     getTotalProduction, getTotalDelivery, updateOrderStatus, factories,
     machinePlans, productionLogs, machineStatusMap, deleteOrder, canCurrentUserDeleteData
   } = useAppState();
@@ -17,6 +17,89 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
+
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+
+  // Edit states
+  const [editReceiveDate, setEditReceiveDate] = useState("");
+  const [editFactoryName, setEditFactoryName] = useState("");
+  const [editFactoryOrder, setEditFactoryOrder] = useState("");
+  const [editFabricType, setEditFabricType] = useState("");
+  const [editDiaGG, setEditDiaGG] = useState("");
+  const [editColor, setEditColor] = useState("");
+  const [editFinishGSM, setEditFinishGSM] = useState("");
+  const [editFinishDia, setEditFinishDia] = useState("");
+  const [editKnitType, setEditKnitType] = useState<"Needle Open" | "Blade Open" | "Tube" | "">("Needle Open");
+  const [editFactoryJobNo, setEditFactoryJobNo] = useState("");
+  const [editRate, setEditRate] = useState("");
+  const [editRequiredQty, setEditRequiredQty] = useState("");
+  const [editRemarks, setEditRemarks] = useState("");
+  const [editStatus, setEditStatus] = useState<Order["status"]>("Pending");
+  const [editYarns, setEditYarns] = useState<Array<{yc: string, lot: string, spinner: string, sl: string}>>([]);
+
+  const startEditingOrder = (order: Order) => {
+    setEditingOrder(order);
+    setEditReceiveDate(order.receiveDate);
+    setEditFactoryName(order.factoryName);
+    setEditFactoryOrder(order.factoryOrder);
+    setEditFabricType(order.fabricType);
+    setEditDiaGG(order.diaGG);
+    setEditColor(order.color);
+    setEditFinishGSM(String(order.finishGSM || ""));
+    setEditFinishDia(String(order.finishDia || ""));
+    setEditKnitType(order.knitType || "Needle Open");
+    setEditFactoryJobNo(order.factoryJobNo);
+    setEditRate(String(order.rate || ""));
+    setEditRequiredQty(String(order.requiredQty || ""));
+    setEditRemarks(order.remarks || "");
+    setEditStatus(order.status);
+    
+    const yClones = (order.yarns || []).map(y => ({ ...y }));
+    while (yClones.length < 4) {
+      yClones.push({ yc: "", lot: "", spinner: "", sl: "" });
+    }
+    setEditYarns(yClones);
+  };
+
+  const handleYarnEditForUpdate = (idx: number, field: string, val: string) => {
+    setEditYarns(prev => prev.map((y, i) => {
+      if (i === idx) {
+        return { ...y, [field]: val };
+      }
+      return y;
+    }));
+  };
+
+  const handleUpdateOrderSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOrder) return;
+    if (!editRequiredQty || !editRate || !editFactoryOrder || !editFactoryJobNo) {
+      alert("Please fill in all mandatory fields (Required KG, Rate, Job No, Order No)");
+      return;
+    }
+
+    const updatedOrder: Order = {
+      ...editingOrder,
+      receiveDate: editReceiveDate,
+      factoryName: editFactoryName,
+      factoryOrder: editFactoryOrder,
+      fabricType: editFabricType,
+      diaGG: editDiaGG,
+      color: editColor,
+      finishGSM: Number(editFinishGSM) || 0,
+      finishDia: Number(editFinishDia) || 0,
+      knitType: editKnitType || undefined,
+      factoryJobNo: editFactoryJobNo,
+      rate: Number(editRate) || 0,
+      requiredQty: Number(editRequiredQty) || 0,
+      yarns: editYarns,
+      remarks: editRemarks,
+      status: editStatus
+    };
+
+    updateOrder(updatedOrder);
+    setEditingOrder(null);
+  };
 
   // Form states
   const [receiveDate, setReceiveDate] = useState(new Date().toISOString().split("T")[0]);
@@ -27,6 +110,7 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
   const [color, setColor] = useState("");
   const [finishGSM, setFinishGSM] = useState("");
   const [finishDia, setFinishDia] = useState("");
+  const [knitType, setKnitType] = useState<"Needle Open" | "Blade Open" | "Tube" | "">("Needle Open");
   const [factoryJobNo, setFactoryJobNo] = useState("");
   const [rate, setRate] = useState("");
   const [requiredQty, setRequiredQty] = useState("");
@@ -76,6 +160,7 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
       color,
       finishGSM: Number(finishGSM) || 0,
       finishDia: Number(finishDia) || 0,
+      knitType,
       factoryJobNo,
       rate: Number(rate) || 0,
       requiredQty: Number(requiredQty) || 0,
@@ -91,6 +176,7 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
     setColor("");
     setFinishGSM("");
     setFinishDia("");
+    setKnitType("Needle Open");
     setFactoryJobNo("");
     setRate("");
     setRequiredQty("");
@@ -218,13 +304,14 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
                 <th className="py-4 px-3 text-right">Del. Bal (Kg)</th>
                 <th className="py-4 px-3">Status</th>
                 <th className="py-4 px-3 text-center">Override</th>
-                {canCurrentUserDeleteData() && <th className="py-4 px-3 text-center w-12">Delete</th>}
+                {canCurrentUserDeleteData() && <th className="py-4 px-3 text-center w-12 text-slate-500 font-mono text-[10px] uppercase">Edit</th>}
+                {canCurrentUserDeleteData() && <th className="py-4 px-3 text-center w-12 text-slate-500 font-mono text-[10px] uppercase">Delete</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm text-slate-750">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={canCurrentUserDeleteData() ? 14 : 13} className="py-12 text-center text-slate-400">
+                  <td colSpan={canCurrentUserDeleteData() ? 15 : 13} className="py-12 text-center text-slate-400">
                     No order records found matching filters.
                   </td>
                 </tr>
@@ -295,24 +382,35 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
                           </select>
                         </td>
                         {canCurrentUserDeleteData() && (
-                          <td className="py-4 px-3 text-center">
-                            <button
-                              onClick={() => {
-                                if (window.confirm(`Are you sure you want to delete order ${order.orderNo}?`)) {
-                                  deleteOrder(order.orderNo);
-                                }
-                              }}
-                              className="p-1 text-slate-300 hover:text-red-500 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors"
-                              title="Delete Order"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </td>
+                          <>
+                            <td className="py-4 px-3 text-center">
+                              <button
+                                onClick={() => startEditingOrder(order)}
+                                className="p-1 text-slate-300 hover:text-sky-600 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors"
+                                title="Edit Order"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                            </td>
+                            <td className="py-4 px-3 text-center">
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Are you sure you want to delete order ${order.orderNo}?`)) {
+                                    deleteOrder(order.orderNo);
+                                  }
+                                }}
+                                className="p-1 text-slate-300 hover:text-red-500 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors"
+                                title="Delete Order"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </>
                         )}
                       </tr>
                       {isExpanded && (
                         <tr className="bg-slate-50">
-                          <td colSpan={canCurrentUserDeleteData() ? 14 : 13} className="py-4 px-6 border-b border-slate-100">
+                          <td colSpan={canCurrentUserDeleteData() ? 15 : 13} className="py-4 px-6 border-b border-slate-100">
                             <div className="space-y-4 text-left py-2">
                               {/* Consolidated Spreadsheet Table */}
                               <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-slate-300">
@@ -324,16 +422,18 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
                                         Fabric Details
                                       </td>
                                       <th className="py-1.5 px-3 border border-slate-300 bg-slate-50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider text-left w-[12%]">DiaX GG</th>
-                                      <th className="py-1.5 px-3 border border-slate-300 bg-slate-50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider text-left w-[12%]">GSM</th>
-                                      <th className="py-1.5 px-3 border border-slate-300 bg-slate-50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider text-left w-[12%]">F.Dia</th>
-                                      <th className="py-1.5 px-3 border border-slate-300 bg-slate-50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider text-left w-[24%]">Color Variant</th>
-                                      <th className="py-1.5 px-3 border border-slate-300 bg-slate-50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider text-left w-[20%]">Factory Job No</th>
-                                      <th className="py-1.5 px-3 border border-slate-300 bg-slate-50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider text-left w-[20%]">Price</th>
+                                      <th className="py-1.5 px-3 border border-slate-300 bg-slate-50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider text-left w-[10%]">GSM</th>
+                                      <th className="py-1.5 px-3 border border-slate-300 bg-slate-50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider text-left w-[24%]">F.Dia (Width)</th>
+                                      <th className="py-1.5 px-3 border border-slate-300 bg-slate-50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider text-left w-[20%]">Color Variant</th>
+                                      <th className="py-1.5 px-3 border border-slate-300 bg-slate-50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider text-left w-[17%]">Factory Job No</th>
+                                      <th className="py-1.5 px-3 border border-slate-300 bg-slate-50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider text-left w-[17%]">Price</th>
                                     </tr>
                                     <tr className="hover:bg-slate-50/40 text-[11px]">
                                       <td className="py-2 px-3 border border-slate-300 font-mono font-bold text-slate-900">{order.diaGG || "—"}</td>
                                       <td className="py-2 px-3 border border-slate-300 font-mono font-semibold text-slate-800">{order.finishGSM || "—"}</td>
-                                      <td className="py-2 px-3 border border-slate-300 font-mono font-semibold text-slate-800">{order.finishDia ? `${order.finishDia}"` : "—"}</td>
+                                      <td className="py-2 px-3 border border-slate-300 font-mono font-semibold text-slate-800">
+                                        {order.finishDia ? (order.knitType ? `${order.finishDia}" ${order.knitType}` : `${order.finishDia}"`) : "—"}
+                                      </td>
                                       <td className="py-2 px-3 border border-slate-300 font-semibold text-slate-800">{order.color || "—"}</td>
                                       <td className="py-2 px-3 border border-slate-300 font-mono text-slate-700 font-semibold">{order.factoryJobNo || "—"}</td>
                                       <td className="py-2 px-3 border border-slate-300 font-mono font-bold text-slate-900">{order.rate ? `${order.rate} BDT/Kg` : "—"}</td>
@@ -604,7 +704,7 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
               </div>
 
               {/* Row 3 */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Finish GSM</label>
                   <input
@@ -624,6 +724,18 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
                     value={finishDia}
                     onChange={(e) => setFinishDia(e.target.value)}
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Knit Type</label>
+                  <select
+                    className="w-full p-2 border border-slate-200 rounded-xl text-sm bg-white"
+                    value={knitType || "Needle Open"}
+                    onChange={(e) => setKnitType(e.target.value as any)}
+                  >
+                    <option value="Needle Open">Needle Open</option>
+                    <option value="Blade Open">Blade Open</option>
+                    <option value="Tube">Tube</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Factory Job No.</label>
@@ -741,6 +853,278 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
                   className="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-sm font-medium disabled:opacity-50 cursor-pointer"
                 >
                   Confirm Code Order
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT ORDER MODAL */}
+      {editingOrder && (
+        <div id="edit_order_modal" className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start justify-center p-4 z-50 overflow-y-auto pt-4 md:pt-10 pb-10">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-slate-50 border-b border-slate-100 py-4 px-6 flex items-center justify-between sticky top-0 bg-white z-10 font-sans">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-sky-600" />
+                <h3 className="font-semibold text-base text-slate-800">Edit Production Order: {editingOrder.orderNo}</h3>
+              </div>
+              <button
+                onClick={() => setEditingOrder(null)}
+                className="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateOrderSubmit} className="p-6 space-y-6">
+              {/* Row 1 */}
+              <div>
+                <h4 className="text-xs font-mono uppercase text-sky-600 font-semibold tracking-wider mb-3">Basic Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Receive Date</label>
+                    <input
+                      type="date"
+                      required
+                      className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-sky-500"
+                      value={editReceiveDate}
+                      onChange={(e) => setEditReceiveDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Factory Partner</label>
+                    {factories.length === 0 ? (
+                      <p className="text-xs text-red-500 bg-red-50 p-2 rounded-lg border border-red-100">
+                        No Running Factories! Setup in Settings first.
+                      </p>
+                    ) : (
+                      <select
+                        className="w-full p-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-hidden focus:border-sky-500"
+                        value={editFactoryName}
+                        onChange={(e) => setEditFactoryName(e.target.value)}
+                      >
+                        {factories.map((f, i) => (
+                          <option key={i} value={f.name}>{f.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Factory Order No.</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. FO-109"
+                      className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-sky-500"
+                      value={editFactoryOrder}
+                      onChange={(e) => setEditFactoryOrder(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Current Status</label>
+                    <select
+                      className="w-full p-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-hidden focus:border-sky-500"
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as any)}
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Running">Running</option>
+                      <option value="Hold">Hold</option>
+                      <option value="Production Done">Production Done</option>
+                      <option value="Complete">Complete</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2 */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Fabric Description Type</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 100% Cotton Single Jersey"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-sky-500"
+                    value={editFabricType}
+                    onChange={(e) => setEditFabricType(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Machine Dia x GG</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 44 x 18"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-sky-500"
+                    value={editDiaGG}
+                    onChange={(e) => setEditDiaGG(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Color Variant</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Carbon Black"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-sky-500"
+                    value={editColor}
+                    onChange={(e) => setEditColor(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Row 3 */}
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Finish GSM</label>
+                  <input
+                    type="number"
+                    placeholder="GSM"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-sky-500"
+                    value={editFinishGSM}
+                    onChange={(e) => setEditFinishGSM(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Finish Width (Dia)</label>
+                  <input
+                    type="number"
+                    placeholder="Dia Inches"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-sky-500"
+                    value={editFinishDia}
+                    onChange={(e) => setEditFinishDia(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Knit Type</label>
+                  <select
+                    className="w-full p-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-hidden focus:border-sky-500"
+                    value={editKnitType || "Needle Open"}
+                    onChange={(e) => setEditKnitType(e.target.value as any)}
+                  >
+                    <option value="Needle Open">Needle Open</option>
+                    <option value="Blade Open">Blade Open</option>
+                    <option value="Tube">Tube</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Factory Job No.</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. JOB-8902"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-sky-500"
+                    value={editFactoryJobNo}
+                    onChange={(e) => setEditFactoryJobNo(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Rate (BDT / Kg)</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="Price per Kg"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-sky-500"
+                    value={editRate}
+                    onChange={(e) => setEditRate(e.target.value)}
+                  />
+                </div>
+                <div className="col-span-2 md:col-span-1">
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Required Qty (Kg)</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="Required Weight"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-hidden focus:border-sky-500"
+                    value={editRequiredQty}
+                    onChange={(e) => setEditRequiredQty(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* YARN SECTIONS */}
+              <div className="border-t border-slate-100 pt-4">
+                <h4 className="text-xs font-mono uppercase text-sky-600 font-semibold tracking-wider mb-3">Yarn Information (Up to 4 segments)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {editYarns.map((yarn, idx) => (
+                    <div key={idx} className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
+                      <p className="text-xs font-semibold text-slate-600 font-mono">Yarn Segment {idx + 1}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-mono uppercase">Yarn Count</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 30s Combed"
+                            className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-hidden focus:border-sky-500"
+                            value={yarn.yc}
+                            onChange={(e) => handleYarnEditForUpdate(idx, "yc", e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-mono uppercase">Yarn Lot</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. RE-77"
+                            className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-hidden focus:border-sky-500"
+                            value={yarn.lot}
+                            onChange={(e) => handleYarnEditForUpdate(idx, "lot", e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-mono uppercase">Spinner Name</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Square Yarns"
+                            className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-hidden focus:border-sky-500"
+                            value={yarn.spinner}
+                            onChange={(e) => handleYarnEditForUpdate(idx, "spinner", e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-mono uppercase">Stitch Length (SL)</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 3.12"
+                            className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-hidden focus:border-sky-500"
+                            value={yarn.sl}
+                            onChange={(e) => handleYarnEditForUpdate(idx, "sl", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* REMARKS */}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Order Remarks / Instructions</label>
+                <textarea
+                  className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-sky-500"
+                  rows={2}
+                  placeholder="Enter custom remarks regarding the stitch, machinery, or timelines..."
+                  value={editRemarks}
+                  onChange={(e) => setEditRemarks(e.target.value)}
+                />
+              </div>
+
+              {/* ACTIONS */}
+              <div className="border-t border-slate-100 pt-4 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingOrder(null)}
+                  className="px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={factories.length === 0}
+                  className="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-sm font-medium disabled:opacity-50 cursor-pointer"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>

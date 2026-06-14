@@ -442,7 +442,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                       <td className="py-3 px-3 whitespace-nowrap truncate">{ordObj.diaGG}</td>
                       <td className="py-3 px-3 font-sans text-slate-600 truncate" title={ordObj.color}>{ordObj.color}</td>
                       <td className="py-3 px-3 truncate">{ordObj.finishGSM}</td>
-                      <td className="py-3 px-3 truncate">{ordObj.finishDia}''</td>
+                      <td className="py-3 px-3 truncate">{ordObj.finishDia}''{ordObj.knitType ? ` ${ordObj.knitType}` : ""}</td>
                       <td className="py-3 px-3 truncate" title={ordObj.factoryJobNo}>{ordObj.factoryJobNo}</td>
                       <td className="py-3 px-3 font-sans text-slate-500 truncate" title={combinedYarn}>{combinedYarn}</td>
                       <td className="py-3 px-3 text-slate-500 truncate" title={combinedLot}>{combinedLot}</td>
@@ -505,7 +505,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                   <p><span className="text-slate-400">Dia x GG:</span> <strong className="text-slate-800">{activeOrder.diaGG}</strong></p>
                   <p><span className="text-slate-400">Color Variant:</span> <strong className="text-slate-800">{activeOrder.color}</strong></p>
                   <p><span className="text-slate-400">Finish GSM:</span> <strong className="text-slate-800">{activeOrder.finishGSM} GSM</strong></p>
-                  <p><span className="text-slate-400">Finish Dia:</span> <strong className="text-slate-800">{activeOrder.finishDia}''</strong></p>
+                  <p><span className="text-slate-400">Finish Dia:</span> <strong className="text-slate-800">{activeOrder.finishDia}''{activeOrder.knitType ? ` ${activeOrder.knitType}` : ""}</strong></p>
                   <p><span className="text-slate-400">Factory Job No:</span> <strong className="text-slate-800">{activeOrder.factoryJobNo}</strong></p>
                 </div>
 

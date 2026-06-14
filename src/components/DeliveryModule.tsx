@@ -891,7 +891,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                                     {ord?.fabricType} ({ord?.color})
                                   </p>
                                 </td>
-                                <td className="py-1 px-1 text-center">{ord?.finishGSM} GSM | F.{ord?.finishDia}"</td>
+                                <td className="py-1 px-1 text-center">{ord?.finishGSM} GSM | F.{ord?.finishDia}"{ord?.knitType ? ` ${ord.knitType}` : ""}</td>
                                 <td className="py-1 px-1 text-center font-bold font-mono">{item.roll || "0"}</td>
                                 <td className="py-1 px-1 text-right font-bold font-mono">{Number(item.qty).toLocaleString() || "0"} Kg</td>
                               </tr>
@@ -1072,7 +1072,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                             <td className="py-3 px-2 border-r border-slate-950 text-center align-middle font-sans">{ord?.fabricType || "—"}</td>
                             <td className="p-0 border-r border-slate-950 text-center align-middle">
                               <div className="py-2.5 px-1 font-semibold border-b border-slate-950">{ord?.diaGG || "—"}</div>
-                              <div className="py-2.5 px-1 text-slate-750">{ord?.finishDia ? `F.${ord.finishDia}"` : "—"}</div>
+                              <div className="py-2.5 px-1 text-slate-750">{ord?.finishDia ? (ord.knitType ? `F.${ord.finishDia}" ${ord.knitType}` : `F.${ord.finishDia}"`) : "—"}</div>
                             </td>
                             <td className="p-0 border-r border-slate-950 text-center align-middle">
                               <div className="py-2.5 px-1 font-semibold border-b border-slate-950">{ord?.finishGSM || "—"}</div>

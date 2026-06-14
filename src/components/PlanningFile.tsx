@@ -653,7 +653,7 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Finish Specs</p>
-                  <p className="font-medium text-slate-800">Finish Dia Width: {activeJobCardOrder.finishDia} Inches </p>
+                  <p className="font-medium text-slate-800">Finish Dia Width: {activeJobCardOrder.finishDia ? (activeJobCardOrder.knitType ? `${activeJobCardOrder.finishDia}" ${activeJobCardOrder.knitType}` : `${activeJobCardOrder.finishDia}"`) : "—"}</p>
                 </div>
               </div>
 

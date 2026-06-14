@@ -73,7 +73,7 @@ export async function createAndPopulateSpreadsheet(
   // Sheet 1: Orders
   const ordersHeaders = [
     "Order No", "Receive Date", "Factory Name", "Factory Order", "Fabric Type", 
-    "Dia x GG", "Color", "Finish GSM", "Finish Dia", "Factory Job No", 
+    "Dia x GG", "Color", "Finish GSM", "Finish Dia/Width", "Factory Job No", 
     "Rate (BDT)", "Required Qty (Kg)", "Status", "Remarks", 
     "Yarn 1 YC", "Yarn 1 Lot", "Yarn 1 Spinner", "Yarn 1 S/L", 
     "Yarn 2 YC", "Yarn 2 Lot", "Yarn 2 Spinner", "Yarn 2 S/L", 
@@ -86,9 +86,10 @@ export async function createAndPopulateSpreadsheet(
     const y2 = yarns[1] || { yc: "", lot: "", spinner: "", sl: "" };
     const y3 = yarns[2] || { yc: "", lot: "", spinner: "", sl: "" };
     const y4 = yarns[3] || { yc: "", lot: "", spinner: "", sl: "" };
+    const finishDiaMerged = o.finishDia ? (o.knitType ? `${o.finishDia} ${o.knitType}` : `${o.finishDia}`) : "";
     return [
       o.orderNo, o.receiveDate, o.factoryName, o.factoryOrder, o.fabricType, 
-      o.diaGG, o.color, o.finishGSM, o.finishDia, o.factoryJobNo, 
+      o.diaGG, o.color, o.finishGSM, finishDiaMerged, o.factoryJobNo, 
       o.rate, o.requiredQty, o.status, o.remarks,
       y1.yc, y1.lot, y1.spinner, y1.sl,
       y2.yc, y2.lot, y2.spinner, y2.sl,
