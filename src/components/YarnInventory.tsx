@@ -365,18 +365,18 @@ export default function YarnInventory({ readOnly = false }: YarnInventoryProps) 
 
       {/* INVENTORY TABLE LEDGER */}
       <div className="bg-white border border-slate-150 rounded-2xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[58vh]">
           <table className="w-full border-collapse text-left">
-            <thead>
+            <thead className="sticky top-0 z-20">
               <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-mono uppercase tracking-wider">
-                <th className="py-4 px-4 w-12 text-center"></th>
-                <th className="py-4 px-3">Order Number</th>
-                <th className="py-4 px-3">Factory Name</th>
-                <th className="py-4 px-3">Factory Order</th>
-                <th className="py-4 px-3">Fabric Type</th>
-                <th className="py-4 px-3">Color</th>
-                <th className="py-4 px-3">Factory Job No</th>
-                <th className="py-4 px-3 text-right">Net Yarn Received (Kg)</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-4 w-12 text-center z-20"></th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Order Number</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Factory Name</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Factory Order</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Fabric Type</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Color</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Factory Job No</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-right z-20">Net Yarn Received (Kg)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm text-slate-750">

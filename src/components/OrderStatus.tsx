@@ -287,25 +287,25 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
 
       {/* ORDERS LEDGER */}
       <div className="bg-white border border-slate-150 rounded-2xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[58vh]">
           <table className="w-full border-collapse text-left">
-            <thead>
+            <thead className="sticky top-0 z-20">
               <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-mono uppercase tracking-wider">
-                <th className="py-4 px-4 w-12 text-center"></th>
-                <th className="py-4 px-3">Order No</th>
-                <th className="py-4 px-3">Factory Name</th>
-                <th className="py-4 px-3">Factory Order</th>
-                <th className="py-4 px-3">Fabric Type</th>
-                <th className="py-4 px-3 text-right">Required (Kg)</th>
-                <th className="py-4 px-3 text-right">Yarn Received (Kg)</th>
-                <th className="py-4 px-3 text-right">Total Prod. (Kg)</th>
-                <th className="py-4 px-3 text-right">Prod. Bal (Kg)</th>
-                <th className="py-4 px-3 text-right">Delivered (Kg)</th>
-                <th className="py-4 px-3 text-right">Del. Bal (Kg)</th>
-                <th className="py-4 px-3">Status</th>
-                <th className="py-4 px-3 text-center">Override</th>
-                {canCurrentUserDeleteData() && <th className="py-4 px-3 text-center w-12 text-slate-500 font-mono text-[10px] uppercase">Edit</th>}
-                {canCurrentUserDeleteData() && <th className="py-4 px-3 text-center w-12 text-slate-500 font-mono text-[10px] uppercase">Delete</th>}
+                <th className="sticky top-0 bg-slate-50 py-4 px-4 w-12 text-center z-20"></th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Order No</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Factory Name</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Factory Order</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Fabric Type</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-right z-20">Required (Kg)</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-right z-20">Yarn Received (Kg)</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-right z-20">Total Prod. (Kg)</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-right z-20">Prod. Bal (Kg)</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-right z-20">Delivered (Kg)</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-right z-20">Del. Bal (Kg)</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Status</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-center z-20">Override</th>
+                {canCurrentUserDeleteData() && <th className="sticky top-0 bg-slate-50 py-4 px-3 text-center w-12 text-slate-500 font-mono text-[10px] uppercase z-20 font-sans">Edit</th>}
+                {canCurrentUserDeleteData() && <th className="sticky top-0 bg-slate-50 py-4 px-3 text-center w-12 text-slate-500 font-mono text-[10px] uppercase z-20 font-sans">Delete</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm text-slate-750">

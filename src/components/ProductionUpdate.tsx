@@ -343,7 +343,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
 
       {/* LEDGER DATA TABLE */}
       <div className="bg-white border border-slate-150 rounded-2xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[58vh]">
           <table className="min-w-[1900px] border-collapse text-left text-xs text-slate-700 table-fixed">
             <colgroup>
               <col className="w-[140px]" />
@@ -365,27 +365,27 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
               <col className="w-[140px]" />
               <col className="w-[120px]" />
             </colgroup>
-            <thead>
+            <thead className="sticky top-0 z-20">
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-mono uppercase tracking-wider text-[10px]">
-                <th className="py-3 px-3">Date</th>
-                <th className="py-3 px-3">W/Oder</th>
-                <th className="py-3 px-3">M/C No</th>
-                <th className="py-3 px-1 text-center">Shift</th>
-                <th className="py-3 px-3">Factory Name</th>
-                <th className="py-3 px-3">Factory Order</th>
-                <th className="py-3 px-3">Fabric Type</th>
-                <th className="py-3 px-3">Dia x GG</th>
-                <th className="py-3 px-3">Color</th>
-                <th className="py-3 px-3">Finish GSM</th>
-                <th className="py-3 px-3">Finish Dia</th>
-                <th className="py-3 px-3">Factory Job No</th>
-                <th className="py-3 px-3">Yarn (YC1+YC2+YC3+YC4)</th>
-                <th className="py-3 px-3">Lot (Lot1+Lot2+Lot3+Lot4)</th>
-                <th className="py-3 px-3">Spinner (Spinner1+Spinner2+Spinner3+Spinner4)</th>
-                <th className="py-3 px-3">SL (S/L1+S/L2+S/L3+S/L4)</th>
-                <th className="py-3 px-3">Roll Number</th>
-                <th className="py-3 px-3 text-right">Total Production (Kg)</th>
-                {canCurrentUserDeleteData() && <th className="py-3 px-3 text-center w-12">Delete</th>}
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Date</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">W/Oder</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">M/C No</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-1 text-center z-20">Shift</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Factory Name</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Factory Order</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Fabric Type</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Dia x GG</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Color</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Finish GSM</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Finish Dia</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Factory Job No</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Yarn (YC1+YC2+YC3+YC4)</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Lot (Lot1+Lot2+Lot3+Lot4)</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Spinner (Spinner1+Spinner2+Spinner3+Spinner4)</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">SL (S/L1+S/L2+S/L3+S/L4)</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 z-20">Roll Number</th>
+                <th className="sticky top-0 bg-slate-50 py-3 px-3 text-right z-20">Total Production (Kg)</th>
+                {canCurrentUserDeleteData() && <th className="sticky top-0 bg-slate-50 py-3 px-3 text-center w-12 z-20">Delete</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono">

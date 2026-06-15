@@ -252,18 +252,18 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
 
       {/* PLANNING MAIN LEDGER */}
       <div className="bg-white border border-slate-150 rounded-2xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[58vh]">
           <table className="w-full border-collapse text-left">
-            <thead>
+            <thead className="sticky top-0 z-20">
               <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-mono uppercase tracking-wider">
-                <th className="py-4 px-4 w-12 text-center"></th>
-                <th className="py-4 px-3" colSpan={2}>Order & Job details</th>
-                <th className="py-4 px-3">Fabric Architecture</th>
-                <th className="py-4 px-3">Dia x GG</th>
-                <th className="py-4 px-3 text-right">Required (Kg)</th>
-                <th className="py-4 px-3 text-right">Planned (Kg)</th>
-                <th className="py-4 px-3 text-right">Plan Balance (Kg)</th>
-                <th className="py-4 px-3 text-center">Action</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-4 w-12 text-center z-20"></th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20" colSpan={2}>Order & Job details</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Fabric Architecture</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 z-20">Dia x GG</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-right z-20">Required (Kg)</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-right z-20">Planned (Kg)</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-right z-20">Plan Balance (Kg)</th>
+                <th className="sticky top-0 bg-slate-50 py-4 px-3 text-center z-20">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm text-slate-750">

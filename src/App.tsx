@@ -17,7 +17,8 @@ import LoginScreen from "./components/LoginScreen";
 import MachineLoad from "./components/MachineLoad";
 import { 
   Building2, Layers, Cpu, Compass, Truck, CreditCard, Settings, 
-  Clock, LogOut, ShieldAlert, ShieldCheck, User, Users
+  Clock, LogOut, ShieldAlert, ShieldCheck, User, Users,
+  Menu, X
 } from "lucide-react";
 
 function AppContent() {
@@ -26,6 +27,7 @@ function AppContent() {
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState<string>("orders");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [systemTime, setSystemTime] = useState("");
 
   // Live Digital Clock updating every second
@@ -115,26 +117,37 @@ function AppContent() {
   };
 
   return (
-    <div id="pro_app_root" className="min-h-screen bg-[#f8fafc] text-slate-750 font-sans flex flex-col md:flex-row print:bg-white print:text-black">
-      {/* LEFT SIDEBAR NAVIGATION - HIDDEN ON PRINT */}
-      <nav id="pro_nav" className="no-print w-full md:w-60 bg-slate-900 flex flex-col border-b md:border-b-0 md:border-r border-slate-800 shrink-0 select-none">
-        {/* Logo Brand Header */}
-        <div className="p-6 space-y-4">
-          <div className="flex items-center gap-1.5 justify-between">
+    <div id="pro_app_root" className="h-screen overflow-hidden bg-[#f8fafc] text-slate-750 font-sans flex flex-col md:flex-row print:bg-white print:text-black print:h-auto print:overflow-visible">
+      {/* LEFT SIDEBAR NAVIGATION - RESPONSIVE HAMBURGER MENU ON MOBILE */}
+      <nav id="pro_nav" className="no-print sticky top-0 z-45 w-full md:w-60 bg-slate-900 flex flex-col border-b md:border-b-0 md:border-r border-slate-800 shrink-0 select-none shadow-md md:shadow-none">
+        {/* Top Header Row: always visible, acts as horizontal brand header on mobile */}
+        <div className="p-4 md:p-6 flex items-center justify-between md:block shrink-0 border-b md:border-b-0 border-slate-800/60">
+          <div className="flex items-center justify-between w-full md:mb-4">
             <div className="flex flex-col">
-              <h1 className="text-white font-bold text-lg tracking-tight leading-none">
+              <h1 className="text-white font-bold text-base md:text-lg tracking-tight leading-none bg-linear-to-r from-white to-slate-200 bg-clip-text text-transparent">
                 {companyProfile.name ? companyProfile.name.trim().split(" ")[0].toUpperCase() : "PROPLANEX"}
               </h1>
-              <span className="text-[9px] text-indigo-400 font-medium tracking-wide mt-1 uppercase">LIVE STATUS</span>
+              <span className="text-[9px] text-indigo-400 font-semibold tracking-widest mt-1 uppercase">LIVE STATUS</span>
             </div>
-            <span className="text-[9px] bg-emerald-950/80 text-emerald-400 font-bold px-1.5 py-0.5 rounded border border-emerald-900/50 shrink-0 flex items-center gap-1">
-              <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
-              ACTIVE
-            </span>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] bg-emerald-950/80 text-emerald-400 font-bold px-1.5 py-0.5 rounded border border-emerald-900/50 shrink-0 flex items-center gap-1">
+                <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
+                ACTIVE
+              </span>
+              {/* Mobile Hamburger Toggle */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all cursor-pointer active:scale-95"
+                title="Toggle Menu"
+              >
+                {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
 
-          {/* BRAND COMPANY LOGO OVERRIDE */}
-          <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex flex-col items-center justify-center gap-2 text-center">
+          {/* BRAND COMPANY LOGO OVERRIDE - desktop always visible */}
+          <div className="hidden md:flex bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex-col items-center justify-center gap-2 text-center mt-4">
             {companyProfile.logoUrl ? (
               <img 
                 src={companyProfile.logoUrl} 
@@ -154,75 +167,105 @@ function AppContent() {
           </div>
         </div>
 
-        {/* Navigation Items list */}
-        <div className="flex-1 px-4 space-y-1.5 overflow-y-auto">
-          {modulesList.map((m) => {
-            const perm = currentUser.permissions[m.id as keyof typeof currentUser.permissions];
-            if (perm === "Hide") return null;
-
-            return (
-              <button
-                key={m.id}
-                onClick={() => setActiveTab(m.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer transition-all duration-150 ${
-                  activeTab === m.id 
-                    ? "bg-indigo-600 text-white font-medium shadow-sm border border-indigo-500/25" 
-                    : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
-                }`}
-              >
-                <div className="flex items-center space-x-2.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${activeTab === m.id ? "bg-white" : "bg-slate-600"}`}></div>
-                  <span className="text-xs font-semibold">{m.label}</span>
-                </div>
-                {perm === "Read Only" && (
-                  <span className="text-[8px] uppercase font-mono px-1 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 leading-none scale-90">
-                    R-O
+        {/* Collapsible content (Hidden on Mobile unless Open, Always shown on Desktop) */}
+        <div className={`flex-1 flex-col ${isMobileMenuOpen ? "flex pb-4" : "hidden md:flex"} md:pb-0 overflow-y-auto`}>
+          {/* Mobile-only Company Logo banner if open */}
+          {isMobileMenuOpen && (
+            <div className="px-4 py-2 md:hidden">
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
+                {companyProfile.logoUrl ? (
+                  <img 
+                    src={companyProfile.logoUrl} 
+                    alt="Company Logo" 
+                    className="h-9 w-auto object-contain filter brightness-110"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="h-8 w-8 rounded bg-indigo-600/25 flex items-center justify-center text-white font-bold text-xs shrink-0 font-sans">
+                    PX
                   </span>
                 )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Authenticated user profile panel */}
-        <div className="p-4 border-t border-slate-800/80 space-y-3 bg-slate-950/40">
-          <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
-            <Clock className="h-3.5 w-3.5 text-indigo-400" />
-            <span className="truncate">{systemTime || "Synchronizing..."}</span>
-          </div>
-
-          <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-            <div className="flex items-center space-x-2 truncate">
-              <div className="w-7 h-7 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-xs text-white uppercase font-bold">
-                {currentUser.userId.substring(0, 2)}
-              </div>
-              <div className="truncate">
-                <p className="text-[11px] text-white font-bold font-mono truncate max-w-[90px]">{currentUser.userId}</p>
-                <p className="text-[8px] text-slate-400 font-semibold tracking-wide uppercase">
-                  {currentUser.userId.toLowerCase() === "superadmin" ? "SUPERADMIN" : "OPERATOR"}
-                </p>
+                <div className="truncate text-left">
+                  <p className="text-white text-xs font-bold font-mono tracking-tight uppercase truncate">{companyProfile.name}</p>
+                  <p className="text-[8px] text-slate-400 italic truncate">{companyProfile.tagline}</p>
+                </div>
               </div>
             </div>
+          )}
 
-            <button
-              onClick={logoutUser}
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-400 cursor-pointer transition-colors"
-              title="Logout Session"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+          {/* Navigation Items list */}
+          <div className="px-4 py-2 space-y-1.5 overflow-y-auto md:flex-1">
+            {modulesList.map((m) => {
+              const perm = currentUser.permissions[m.id as keyof typeof currentUser.permissions];
+              if (perm === "Hide") return null;
+
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    setActiveTab(m.id);
+                    setIsMobileMenuOpen(false); // Close menu on select
+                  }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer transition-all duration-150 ${
+                    activeTab === m.id 
+                      ? "bg-indigo-600 text-white font-medium shadow-sm border border-indigo-500/25" 
+                      : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <div className={`w-1.5 h-1.5 rounded-full ${activeTab === m.id ? "bg-white" : "bg-slate-600"}`}></div>
+                    <span className="text-xs font-semibold">{m.label}</span>
+                  </div>
+                  {perm === "Read Only" && (
+                    <span className="text-[8px] uppercase font-mono px-1 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 leading-none scale-90">
+                      R-O
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Authenticated user profile panel */}
+          <div className="p-4 border-t border-slate-800/80 space-y-3 bg-slate-950/40 mt-auto shadow-inner text-left">
+            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+              <Clock className="h-3.5 w-3.5 text-indigo-400" />
+              <span className="truncate">{systemTime || "Synchronizing..."}</span>
+            </div>
+
+            <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+              <div className="flex items-center space-x-2 truncate">
+                <div className="w-7 h-7 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-xs text-white uppercase font-bold">
+                  {currentUser.userId.substring(0, 2)}
+                </div>
+                <div className="truncate">
+                  <p className="text-[11px] text-white font-bold font-mono truncate max-w-[90px]">{currentUser.userId}</p>
+                  <p className="text-[8px] text-slate-400 font-semibold tracking-wide uppercase">
+                    {currentUser.userId.toLowerCase() === "superadmin" ? "SUPERADMIN" : "OPERATOR"}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={logoutUser}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-400 cursor-pointer transition-colors"
+                title="Logout Session"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </nav>
 
       {/* MAIN INNER CONTAINER */}
-      <main className="flex-1 flex flex-col h-full min-h-screen overflow-hidden print:overflow-visible">
+      <main className="flex-1 flex flex-col h-full md:min-h-screen overflow-hidden print:overflow-visible">
         {/* HEADER BAR - HIDDEN ON PRINT */}
-        <header className="no-print h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 select-none">
-          <div className="text-xs font-bold text-slate-800 uppercase tracking-tight flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-            <span>PROPLANEX HUB / </span>
-            <span className="text-indigo-650 font-mono text-[11px] normal-case bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">
+        <header className="no-print h-auto min-h-16 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 md:px-8 shrink-0 select-none gap-3 sm:gap-0">
+          <div className="text-xs font-bold text-slate-800 uppercase tracking-tight flex items-center gap-2 flex-wrap">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+            <span className="hidden md:inline">PROPLANEX HUB / </span>
+            <span className="text-indigo-650 font-mono text-[11px] normal-case bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 truncate max-w-[280px] sm:max-w-none">
               {activeTab === "orders" ? "Master Orders Status Window" : 
                activeTab === "yarn" ? "Yarn Inventory Stocks & Lots" : 
                activeTab === "planning" ? "Production Planning Cards" : 
@@ -234,7 +277,7 @@ function AppContent() {
             </span>
           </div>
 
-          <div className="flex items-center space-x-4 text-xs font-semibold">
+          <div className="flex items-center space-x-4 text-xs font-semibold self-end sm:self-auto">
             {/* Display Active partners count KPI if requested */}
             <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-lg px-2.5 py-1 text-slate-500">
               <span className="text-[10px]">Active Partners:</span>
