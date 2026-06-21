@@ -7,6 +7,7 @@ import {
   getDocs, 
   deleteDoc,
   getDocFromServer,
+  getDocsFromServer,
   writeBatch
 } from "firebase/firestore";
 import { 
@@ -254,6 +255,135 @@ export async function saveBatchCollection<T extends { id?: string; orderNo?: str
       errStr.toLowerCase().includes("could not reach")
     ) {
       console.warn(`Firestore batch write for ${colName} queued locally in offline state.`);
+      return;
+    }
+    handleFirestoreError(err, OperationType.WRITE, colName);
+  }
+}
+
+// Fetch collection directly from the Firestore servers (bypassing the offline/local cache to avoid stale display on refresh)
+export async function fetchCollectionFromServer<T>(colName: string): Promise<T[]> {
+  try {
+    const colRef = collection(db, colName);
+    const querySnapshot = await getDocsFromServer(colRef);
+    const results: T[] = [];
+    querySnapshot.forEach((doc) => {
+      results.push(doc.data() as T);
+    });
+    return results;
+  } catch (err) {
+    console.warn(`Direct server fetch for ${colName} failed (expected if offline). Falling back to cached local instance:`, err);
+    return fetchCollection<T>(colName);
+  }
+}
+
+// Key-value settings loading directly from Firestore servers (bypassing offline/local cache on refresh)
+export async function loadSharedSettingFromServer<T>(key: string, fallback: T): Promise<T> {
+  try {
+    const docRef = doc(db, 'workspace_info', key);
+    const snap = await getDocFromServer(docRef);
+    if (snap.exists()) {
+      return snap.data() as T;
+    }
+    return fallback;
+  } catch (err) {
+    console.warn(`Direct server fetch for setting '${key}' failed (expected if offline). Falling back to cached local instance:`, err);
+    return loadSharedSetting<T>(key, fallback);
+  }
+}
+
+// Perform advanced delta comparison and push ONLY changed or deleted records to Firestore.
+// Avoids redrawing/rewriting wholesale lists on every single update, preventing quota exhaustion, dropouts, and latency.
+export async function syncCollectionDelta<T extends { id?: string; orderNo?: string; userId?: string; machineNo?: string; name?: string; challanNo?: string }>(
+  colName: string,
+  newItems: T[],
+  oldItems: T[],
+  idKey: keyof T = "id"
+) {
+  try {
+    // Index the items by their unique key for instant O(1) comparison and mapping
+    const newMap = new Map<string, T>();
+    newItems.forEach(item => {
+      const idValue = String(item[idKey] || item.id || "");
+      if (idValue) newMap.set(idValue, item);
+    });
+
+    const oldMap = new Map<string, T>();
+    oldItems.forEach(item => {
+      const idValue = String(item[idKey] || item.id || "");
+      if (idValue) oldMap.set(idValue, item);
+    });
+
+    const toUpsert: T[] = [];
+    newMap.forEach((newItem, idValue) => {
+      const oldItem = oldMap.get(idValue);
+      if (!oldItem) {
+        // Record added
+        toUpsert.push(newItem);
+      } else {
+        // Record exists, check if any properties changed
+        if (JSON.stringify(newItem) !== JSON.stringify(oldItem)) {
+          toUpsert.push(newItem);
+        }
+      }
+    });
+
+    const toDeleteIds: string[] = [];
+    oldMap.forEach((_, idValue) => {
+      if (!newMap.has(idValue)) {
+        // Record deleted
+        toDeleteIds.push(idValue);
+      }
+    });
+
+    // If perfectly in sync, terminate early to avoid wasting writes or firing watchers
+    if (toUpsert.length === 0 && toDeleteIds.length === 0) {
+      return;
+    }
+
+    console.info(`[DELETION_AUTHORITY] Syncing delta for '${colName}'. Upserting: ${toUpsert.length}, Deleting: ${toDeleteIds.length}`);
+
+    // Break massive batched updates into standard Firestore-safe chunks of up to 400 operations
+    const batchList: { type: 'set' | 'delete'; docRef: any; data?: any }[] = [];
+    toUpsert.forEach(item => {
+      const idValue = String(item[idKey] || item.id || "");
+      if (idValue) {
+        batchList.push({
+          type: 'set',
+          docRef: doc(db, colName, idValue),
+          data: item
+        });
+      }
+    });
+
+    toDeleteIds.forEach(idValue => {
+      batchList.push({
+        type: 'delete',
+        docRef: doc(db, colName, idValue)
+      });
+    });
+
+    for (let i = 0; i < batchList.length; i += 400) {
+      const chunk = batchList.slice(i, i + 400);
+      const batch = writeBatch(db);
+      chunk.forEach(op => {
+        if (op.type === 'set') {
+          batch.set(op.docRef, op.data);
+        } else {
+          batch.delete(op.docRef);
+        }
+      });
+      await batch.commit();
+    }
+  } catch (err) {
+    const errStr = err instanceof Error ? err.message : String(err);
+    if (
+      errStr.toLowerCase().includes("unavailable") ||
+      errStr.toLowerCase().includes("offline") ||
+      errStr.toLowerCase().includes("network") ||
+      errStr.toLowerCase().includes("could not reach")
+    ) {
+      console.warn(`Firestore delta sync for ${colName} failed due to client offline state. Local buffers remain active.`);
       return;
     }
     handleFirestoreError(err, OperationType.WRITE, colName);

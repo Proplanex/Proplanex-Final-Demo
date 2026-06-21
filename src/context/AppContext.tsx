@@ -13,7 +13,10 @@ import {
   saveSharedSetting,
   loadSharedSetting,
   fetchCollection,
-  saveBatchCollection
+  saveBatchCollection,
+  fetchCollectionFromServer,
+  loadSharedSettingFromServer,
+  syncCollectionDelta
 } from "../utils/firebaseFirestoreService";
 import { doc, collection, onSnapshot } from "firebase/firestore";
 import { db } from "../utils/firebaseAuth";
@@ -201,37 +204,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await validateFirestoreConnection();
 
         // Check if the cloud database has already been seeded/initialized
-        const dbStatus = await loadSharedSetting<{ seeded: boolean } | null>("db_status", null);
+        const dbStatus = await loadSharedSettingFromServer<{ seeded: boolean } | null>("db_status", null);
         const isSeededInCloud = dbStatus?.seeded || false;
 
         if (isSeededInCloud) {
           // 1. Load configuration templates
-          const cProfile = await loadSharedSetting<CompanyProfile | null>("companyProfile", null);
+          const cProfile = await loadSharedSettingFromServer<CompanyProfile | null>("companyProfile", null);
           if (cProfile) {
             setCompanyProfile(cProfile);
             lastCloudSyncedRef.current.companyProfile = JSON.stringify(cProfile);
           }
 
-          const pProfile = await loadSharedSetting<PoweredByProfile | null>("poweredByProfile", null);
+          const pProfile = await loadSharedSettingFromServer<PoweredByProfile | null>("poweredByProfile", null);
           if (pProfile) {
             setPoweredByProfile(pProfile);
             lastCloudSyncedRef.current.poweredByProfile = JSON.stringify(pProfile);
           }
 
-          const tConfig = await loadSharedSetting<{ trialDays: string; trialExpirationDate: string | null } | null>("trialConfig", null);
+          const tConfig = await loadSharedSettingFromServer<{ trialDays: string; trialExpirationDate: string | null } | null>("trialConfig", null);
           if (tConfig) {
             setTrialDays(tConfig.trialDays);
             setTrialExpirationDate(tConfig.trialExpirationDate);
             lastCloudSyncedRef.current.trialConfig = JSON.stringify({ trialDays: tConfig.trialDays, trialExpirationDate: tConfig.trialExpirationDate });
           }
 
-          const sWebhook = await loadSharedSetting<{ webhookUrl: string } | null>("sheetsConfig", null);
+          const sWebhook = await loadSharedSettingFromServer<{ webhookUrl: string } | null>("sheetsConfig", null);
           if (sWebhook) {
             setSheetsWebhookUrl(sWebhook.webhookUrl);
             lastCloudSyncedRef.current.sheetsConfig = JSON.stringify({ webhookUrl: sWebhook.webhookUrl });
           }
 
-          const gClientId = await loadSharedSetting<{ clientId: string } | null>("googleClientIdConfig", null);
+          const gClientId = await loadSharedSettingFromServer<{ clientId: string } | null>("googleClientIdConfig", null);
           if (gClientId) {
             setGoogleClientId(gClientId.clientId);
             localStorage.setItem("proplaex_google_client_id", gClientId.clientId);
@@ -239,39 +242,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
 
           // 2. Load core entity registries (always load, even if empty)
-          const cloudOrders = await fetchCollection<Order>("orders");
+          const cloudOrders = await fetchCollectionFromServer<Order>("orders");
           setOrders(cloudOrders);
           lastCloudSyncedRef.current.orders = JSON.stringify(cloudOrders);
 
-          const cloudYarn = await fetchCollection<YarnTransaction>("yarnTransactions");
+          const cloudYarn = await fetchCollectionFromServer<YarnTransaction>("yarnTransactions");
           setYarnTransactions(cloudYarn);
           lastCloudSyncedRef.current.yarnTransactions = JSON.stringify(cloudYarn);
 
-          const cloudPlans = await fetchCollection<MachinePlan>("machinePlans");
+          const cloudPlans = await fetchCollectionFromServer<MachinePlan>("machinePlans");
           setMachinePlans(cloudPlans);
           lastCloudSyncedRef.current.machinePlans = JSON.stringify(cloudPlans);
 
-          const cloudLogs = await fetchCollection<ProductionLog>("productionLogs");
+          const cloudLogs = await fetchCollectionFromServer<ProductionLog>("productionLogs");
           setProductionLogs(cloudLogs);
           lastCloudSyncedRef.current.productionLogs = JSON.stringify(cloudLogs);
 
-          const cloudChallans = await fetchCollection<DeliveryChallan>("deliveryChallans");
+          const cloudChallans = await fetchCollectionFromServer<DeliveryChallan>("deliveryChallans");
           setDeliveryChallans(cloudChallans);
           lastCloudSyncedRef.current.deliveryChallans = JSON.stringify(cloudChallans);
 
-          const cloudBills = await fetchCollection<BillRecord>("billRecords");
+          const cloudBills = await fetchCollectionFromServer<BillRecord>("billRecords");
           setBillRecords(cloudBills);
           lastCloudSyncedRef.current.billRecords = JSON.stringify(cloudBills);
 
-          const cloudMachines = await fetchCollection<MachineConfig>("machines");
+          const cloudMachines = await fetchCollectionFromServer<MachineConfig>("machines");
           setMachines(cloudMachines);
           lastCloudSyncedRef.current.machines = JSON.stringify(cloudMachines);
 
-          const cloudFactories = await fetchCollection<RunningFactory>("factories");
+          const cloudFactories = await fetchCollectionFromServer<RunningFactory>("factories");
           setFactories(cloudFactories);
           lastCloudSyncedRef.current.factories = JSON.stringify(cloudFactories);
 
-          const cloudUsers = await fetchCollection<AppUser>("users");
+          const cloudUsers = await fetchCollectionFromServer<AppUser>("users");
           if (cloudUsers.length > 0) {
             setUsers(cloudUsers);
             lastCloudSyncedRef.current.users = JSON.stringify(cloudUsers);
@@ -279,7 +282,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             lastCloudSyncedRef.current.users = JSON.stringify(users);
           }
 
-          const cloudStatuses = await fetchCollection<{ id: string; status: string }>("machineStatuses");
+          const cloudStatuses = await fetchCollectionFromServer<{ id: string; status: string }>("machineStatuses");
           const statusMap: Record<string, string> = {};
           cloudStatuses.forEach(s => {
             statusMap[s.id] = s.status;
@@ -597,13 +600,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
-  // Sync to Centralized Cloud Firestore gated by loaded status & local modifications
+  // Sync to Centralized Cloud Firestore gated by loaded status & local modifications (highly optimized delta-based updates)
   useEffect(() => {
     if (!isCloudLoaded || isQuotaExceeded) return;
     const serialized = JSON.stringify(orders);
-    if (serialized === lastCloudSyncedRef.current.orders) return;
+    const lastSerialized = lastCloudSyncedRef.current.orders;
+    if (serialized === lastSerialized) return;
 
-    saveBatchCollection("orders", orders, "orderNo")
+    const oldItems = lastSerialized ? JSON.parse(lastSerialized) : [];
+    syncCollectionDelta("orders", orders, oldItems, "orderNo")
       .then(() => {
         lastCloudSyncedRef.current.orders = serialized;
       })
@@ -618,9 +623,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!isCloudLoaded || isQuotaExceeded) return;
     const serialized = JSON.stringify(yarnTransactions);
-    if (serialized === lastCloudSyncedRef.current.yarnTransactions) return;
+    const lastSerialized = lastCloudSyncedRef.current.yarnTransactions;
+    if (serialized === lastSerialized) return;
 
-    saveBatchCollection("yarnTransactions", yarnTransactions, "id")
+    const oldItems = lastSerialized ? JSON.parse(lastSerialized) : [];
+    syncCollectionDelta("yarnTransactions", yarnTransactions, oldItems, "id")
       .then(() => {
         lastCloudSyncedRef.current.yarnTransactions = serialized;
       })
@@ -635,9 +642,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!isCloudLoaded || isQuotaExceeded) return;
     const serialized = JSON.stringify(machinePlans);
-    if (serialized === lastCloudSyncedRef.current.machinePlans) return;
+    const lastSerialized = lastCloudSyncedRef.current.machinePlans;
+    if (serialized === lastSerialized) return;
 
-    saveBatchCollection("machinePlans", machinePlans, "id")
+    const oldItems = lastSerialized ? JSON.parse(lastSerialized) : [];
+    syncCollectionDelta("machinePlans", machinePlans, oldItems, "id")
       .then(() => {
         lastCloudSyncedRef.current.machinePlans = serialized;
       })
@@ -652,9 +661,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!isCloudLoaded || isQuotaExceeded) return;
     const serialized = JSON.stringify(productionLogs);
-    if (serialized === lastCloudSyncedRef.current.productionLogs) return;
+    const lastSerialized = lastCloudSyncedRef.current.productionLogs;
+    if (serialized === lastSerialized) return;
 
-    saveBatchCollection("productionLogs", productionLogs, "id")
+    const oldItems = lastSerialized ? JSON.parse(lastSerialized) : [];
+    syncCollectionDelta("productionLogs", productionLogs, oldItems, "id")
       .then(() => {
         lastCloudSyncedRef.current.productionLogs = serialized;
       })
@@ -669,9 +680,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!isCloudLoaded || isQuotaExceeded) return;
     const serialized = JSON.stringify(deliveryChallans);
-    if (serialized === lastCloudSyncedRef.current.deliveryChallans) return;
+    const lastSerialized = lastCloudSyncedRef.current.deliveryChallans;
+    if (serialized === lastSerialized) return;
 
-    saveBatchCollection("deliveryChallans", deliveryChallans, "challanNo")
+    const oldItems = lastSerialized ? JSON.parse(lastSerialized) : [];
+    syncCollectionDelta("deliveryChallans", deliveryChallans, oldItems, "challanNo")
       .then(() => {
         lastCloudSyncedRef.current.deliveryChallans = serialized;
       })
@@ -686,9 +699,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!isCloudLoaded || isQuotaExceeded) return;
     const serialized = JSON.stringify(billRecords);
-    if (serialized === lastCloudSyncedRef.current.billRecords) return;
+    const lastSerialized = lastCloudSyncedRef.current.billRecords;
+    if (serialized === lastSerialized) return;
 
-    saveBatchCollection("billRecords", billRecords, "id")
+    const oldItems = lastSerialized ? JSON.parse(lastSerialized) : [];
+    syncCollectionDelta("billRecords", billRecords, oldItems, "id")
       .then(() => {
         lastCloudSyncedRef.current.billRecords = serialized;
       })
@@ -737,9 +752,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!isCloudLoaded || isQuotaExceeded) return;
     const serialized = JSON.stringify(machines);
-    if (serialized === lastCloudSyncedRef.current.machines) return;
+    const lastSerialized = lastCloudSyncedRef.current.machines;
+    if (serialized === lastSerialized) return;
 
-    saveBatchCollection("machines", machines, "machineNo")
+    const oldItems = lastSerialized ? JSON.parse(lastSerialized) : [];
+    syncCollectionDelta("machines", machines, oldItems, "machineNo")
       .then(() => {
         lastCloudSyncedRef.current.machines = serialized;
       })
@@ -754,9 +771,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!isCloudLoaded || isQuotaExceeded) return;
     const serialized = JSON.stringify(factories);
-    if (serialized === lastCloudSyncedRef.current.factories) return;
+    const lastSerialized = lastCloudSyncedRef.current.factories;
+    if (serialized === lastSerialized) return;
 
-    saveBatchCollection("factories", factories, "name")
+    const oldItems = lastSerialized ? JSON.parse(lastSerialized) : [];
+    syncCollectionDelta("factories", factories, oldItems, "name")
       .then(() => {
         lastCloudSyncedRef.current.factories = serialized;
       })
@@ -772,9 +791,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!isCloudLoaded || isQuotaExceeded) return;
     const statusList = Object.entries(machineStatusMap).map(([mNo, status]) => ({ id: mNo, status }));
     const serialized = JSON.stringify(statusList);
-    if (serialized === lastCloudSyncedRef.current.machineStatuses) return;
+    const lastSerialized = lastCloudSyncedRef.current.machineStatuses;
+    if (serialized === lastSerialized) return;
 
-    saveBatchCollection("machineStatuses", statusList, "id")
+    const oldItems = lastSerialized ? JSON.parse(lastSerialized) : [];
+    syncCollectionDelta("machineStatuses", statusList, oldItems, "id")
       .then(() => {
         lastCloudSyncedRef.current.machineStatuses = serialized;
       })
@@ -789,9 +810,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!isCloudLoaded || isQuotaExceeded) return;
     const serialized = JSON.stringify(users);
-    if (serialized === lastCloudSyncedRef.current.users) return;
+    const lastSerialized = lastCloudSyncedRef.current.users;
+    if (serialized === lastSerialized) return;
 
-    saveBatchCollection("users", users, "userId")
+    const oldItems = lastSerialized ? JSON.parse(lastSerialized) : [];
+    syncCollectionDelta("users", users, oldItems, "userId")
       .then(() => {
         lastCloudSyncedRef.current.users = serialized;
       })

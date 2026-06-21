@@ -1,14 +1,16 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from "firebase/auth";
-import { initializeFirestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore } from "firebase/firestore";
 import firebaseConfig from "../../firebase-applet-config.json";
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-  useFetchStreams: false
-} as any, firebaseConfig.firestoreDatabaseId);
+
+// Use standard Firestore initialization which automatically leverages WebSockets
+// and enables instant, robust automatic recovery/reconnection after prolonged device sleep/inactivity.
+export const db = firebaseConfig.firestoreDatabaseId
+  ? initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId)
+  : getFirestore(app);
 
 const provider = new GoogleAuthProvider();
 // Google Sheets API full write scope
