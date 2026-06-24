@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useAppState } from "../context/AppContext";
-import { Shield, Lock, Eye, EyeOff, Sparkles, AlertCircle } from "lucide-react";
+import { Shield, Lock, Eye, EyeOff, Sparkles, AlertCircle, Loader2 } from "lucide-react";
 
 interface LoginScreenProps {
   isExpiredRecovery?: boolean;
 }
 
 export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenProps) {
-  const { loginUser, trialDays, trialExpirationDate, isExpired } = useAppState();
+  const { loginUser, trialDays, trialExpirationDate, isExpired, isCloudLoaded, retryCloudSync } = useAppState();
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -68,59 +68,90 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-5">
-          {/* User ID Field */}
-          <div className="space-y-1.5">
-            <label className="block text-[10px] text-slate-400 font-mono uppercase tracking-wider font-bold">User Identifier</label>
-            <div className="relative">
-              <input
-                type="text"
-                required
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 text-xs text-white placeholder-slate-650 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden font-mono transition-all"
-                placeholder={isExpiredRecovery ? "superadmin" : "e.g. admin@proplanex.com"}
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-              />
+        {!isCloudLoaded ? (
+          <div className="space-y-6 py-6 text-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full border-2 border-indigo-500/10 border-t-indigo-500 animate-spin flex items-center justify-center"></div>
+                <div className="absolute inset-0 flex items-center justify-center text-indigo-400">
+                  <Shield className="h-6 w-6 animate-pulse" />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-white text-xs font-bold font-mono tracking-wider uppercase">SECURE PORTAL HANDSHAKE</p>
+                <p className="text-slate-400 text-[10px] uppercase tracking-wider leading-relaxed max-w-xs mx-auto">
+                  Establishing secure encrypted handshake with central database nodes to synchronize active registries...
+                </p>
+              </div>
             </div>
-          </div>
 
-          {/* Password Field */}
-          <div className="space-y-1.5">
-            <label className="block text-[10px] text-slate-400 font-mono uppercase tracking-wider font-bold">Secure Access Keys</label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-4 pr-11 text-xs text-white placeholder-slate-650 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden font-mono transition-all"
-                placeholder={isExpiredRecovery ? "Proplanex@Raihan" : "••••••••••••"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+            <div className="pt-2 flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                onClick={retryCloudSync}
+                className="w-full bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 font-mono font-bold py-2.5 text-[10px] rounded-xl cursor-pointer transition-all uppercase tracking-wider flex items-center justify-center gap-1.5"
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <Loader2 className="h-3 w-3 animate-spin text-indigo-400" />
+                <span>Retry Connection handshake</span>
               </button>
             </div>
           </div>
-
-          {errorMsg && (
-            <div className="text-[11px] font-semibold text-red-400 bg-red-950/35 border border-red-900/50 p-2.5 rounded-lg flex items-center gap-1.5 animate-pulse">
-              <p>⚠️ {errorMsg}</p>
+        ) : (
+          <form onSubmit={handleLogin} className="space-y-5">
+            {/* User ID Field */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] text-slate-400 font-mono uppercase tracking-wider font-bold">User Identifier</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 text-xs text-white placeholder-slate-650 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden font-mono transition-all"
+                  placeholder={isExpiredRecovery ? "superadmin" : "e.g. admin@proplanex.com"}
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                />
+              </div>
             </div>
-          )}
 
-          {/* Submit Action */}
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white font-bold py-3 text-xs rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1.5"
-          >
-            <Lock className="h-3.5 w-3.5" />
-            <span>{isExpiredRecovery ? "Authenticate & Renew" : "Request Portal Logging"}</span>
-          </button>
-        </form>
+            {/* Password Field */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] text-slate-400 font-mono uppercase tracking-wider font-bold">Secure Access Keys</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-4 pr-11 text-xs text-white placeholder-slate-650 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden font-mono transition-all"
+                  placeholder={isExpiredRecovery ? "Proplanex@Raihan" : "••••••••••••"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div className="text-[11px] font-semibold text-red-400 bg-red-950/35 border border-red-900/50 p-2.5 rounded-lg flex items-center gap-1.5 animate-pulse">
+                <p>⚠️ {errorMsg}</p>
+              </div>
+            )}
+
+            {/* Submit Action */}
+            <button
+              type="submit"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white font-bold py-3 text-xs rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1.5"
+            >
+              <Lock className="h-3.5 w-3.5" />
+              <span>{isExpiredRecovery ? "Authenticate & Renew" : "Request Portal Logging"}</span>
+            </button>
+          </form>
+        )}
 
 
       </div>

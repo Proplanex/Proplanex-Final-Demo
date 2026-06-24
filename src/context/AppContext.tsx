@@ -18,7 +18,7 @@ import {
   loadSharedSettingFromServer,
   syncCollectionDelta
 } from "../utils/firebaseFirestoreService";
-import { doc, collection, onSnapshot } from "firebase/firestore";
+import { doc, collection, onSnapshot, enableNetwork, getDocFromServer } from "firebase/firestore";
 import { db } from "../utils/firebaseAuth";
 
 interface AppContextType {
@@ -98,6 +98,7 @@ interface AppContextType {
   updateGoogleClientId: (clientId: string) => void;
   isQuotaExceeded: boolean;
   retryCloudSync: () => void;
+  isCloudLoaded: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -203,9 +204,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         await validateFirestoreConnection();
 
-        // Check if the cloud database has already been seeded/initialized
-        const dbStatus = await loadSharedSettingFromServer<{ seeded: boolean } | null>("db_status", null);
-        const isSeededInCloud = dbStatus?.seeded || false;
+        // Direct server query to verify database initialization status.
+        // If this query fails due to network/offline conditions, we MUST fallback to true (assume seeded)
+        // to avoid running the 'else' block and triggering unrequested cloud overrides/overwrites.
+        let isSeededInCloud = false;
+        try {
+          const dbStatusRef = doc(db, 'workspace_info', 'db_status');
+          const dbStatusSnap = await getDocFromServer(dbStatusRef);
+          isSeededInCloud = dbStatusSnap.exists() && (dbStatusSnap.data() as any)?.seeded === true;
+        } catch (err) {
+          console.warn("Direct db_status verification failed (expected if offline). Defaulting to seeded mode to preserve existing cloud data:", err);
+          isSeededInCloud = true;
+        }
 
         if (isSeededInCloud) {
           // 1. Load configuration templates
@@ -1494,6 +1504,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Active document visibility and device network status monitors
+  // which immediately trigger Firestore network reconnection and refresh,
+  // bypassing delayed client-side backoffs and restoring real-time data sync instantly.
+  useEffect(() => {
+    const forceSyncReconnect = () => {
+      if (navigator.onLine) {
+        console.info("[Firestore Reconnect] Network connection restored/active. Forcing instant Firestore reconnection handshake...");
+        enableNetwork(db)
+          .then(() => {
+            console.info("[Firestore Reconnect] Handshake succeeded. Central repository is back online.");
+          })
+          .catch((err) => {
+            console.warn("[Firestore Reconnect] Reconnection handshake deferred:", err);
+          });
+      }
+    };
+
+    window.addEventListener("online", forceSyncReconnect);
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        console.info("[Firestore Reconnect] App window active/visible. Forcing instant synchronization update...");
+        forceSyncReconnect();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("online", forceSyncReconnect);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   return (
     <AppContext.Provider value={{
       orders,
@@ -1561,7 +1604,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       googleClientId,
       updateGoogleClientId: setGoogleClientId,
       isQuotaExceeded,
-      retryCloudSync
+      retryCloudSync,
+      isCloudLoaded
     }}>
       {children}
     </AppContext.Provider>
