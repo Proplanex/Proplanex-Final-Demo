@@ -12,7 +12,8 @@ interface BillingSectionProps {
 
 export default function BillingSection({ readOnly = false }: BillingSectionProps) {
   const { 
-    orders, deliveryChallans, billRecords, addBillRecord, factories, companyProfile, poweredByProfile, deleteBillRecord, canCurrentUserDeleteData 
+    orders, deliveryChallans, billRecords, addBillRecord, factories, companyProfile, poweredByProfile, deleteBillRecord, canCurrentUserDeleteData,
+    showToast
   } = useAppState();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -41,6 +42,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
     try {
       setPrintError(null);
       await downloadElementAsPdf("billing_invoice_print_target", activePrintBill.id);
+      showToast(`Invoice ${activePrintBill.id} exported to PDF successfully!`, "success");
     } catch (err) {
       console.warn("Direct PDF export failed: ", err);
       setPrintError("Direct PDF export failed. Try opening the app in a standalone tab.");
@@ -166,6 +168,8 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
       takaInWords: numberToWords(totalBillAmt)
     });
 
+    showToast(`Invoice ${nextBillNo} generated and registered successfully!`, "success");
+
     setSelectedChallanNos([""]);
     setShowAddModal(false);
   };
@@ -221,6 +225,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
     });
 
     downloadTableAsExcel(data, `PROPLANEX_Billing_Ledger_${new Date().toISOString().split("T")[0]}`);
+    showToast("Billing ledger exported to Excel (.xlsx) successfully!", "success");
   };
 
   return (
@@ -367,6 +372,7 @@ export default function BillingSection({ readOnly = false }: BillingSectionProps
                             onClick={() => {
                               if (window.confirm(`Are you sure you want to delete invoice ${bill.id}? This will restore the bill balance for its associated delivery challans.`)) {
                                 deleteBillRecord(bill.id);
+                                showToast(`Invoice ${bill.id} deleted. Deliveries have been restored to unbilled status.`, "info");
                               }
                             }}
                             className="text-slate-300 hover:text-red-500 hover:bg-slate-50 p-1.5 rounded transition-colors cursor-pointer inline-flex items-center"

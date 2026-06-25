@@ -224,7 +224,7 @@ export default function GoogleSheetsSync() {
     }
 
     state.updateSheetsWebhookUrl(url);
-    alert("Successfully activated Google Sheets background sync webhook! All system updates are now fully synchronized instantly in real-time.");
+    state.showToast("Successfully activated Google Sheets background sync webhook! All system updates are now fully synchronized instantly in real-time.", "success");
   };
 
   const handleClearWebhook = () => {
@@ -232,6 +232,7 @@ export default function GoogleSheetsSync() {
       state.updateSheetsWebhookUrl("");
       setWebhookUrlInput("");
       setTestWebhookResult(null);
+      state.showToast("Google Sheets background sync webhook disconnected successfully.", "info");
     }
   };
 
@@ -271,15 +272,19 @@ export default function GoogleSheetsSync() {
         const raw = await res.json();
         if (raw.status === "success") {
           setTestWebhookResult("Success! Connection successfully established and database synchronized elegantly.");
+          state.showToast("Google Sheets connection test succeeded!", "success");
         } else {
           setTestWebhookResult(`Failed: Subscript responded with: ${raw.message || "Unknown error"}`);
+          state.showToast("Google Sheets connection test failed.", "error");
         }
       } else {
         setTestWebhookResult(`Failed to connect (HTTP status: ${res.status}). Verify your script is authorized and deployed for 'Anyone'.`);
+        state.showToast("Google Sheets connection test failed.", "error");
       }
     } catch (e: any) {
       console.warn(e);
       setTestWebhookResult(`Connection failed: ${e.message || e}. Double-check that Web App CORS options are configured for 'Anyone' access.`);
+      state.showToast("Google Sheets connection test failed.", "error");
     } finally {
       setIsTestingWebhook(false);
     }
@@ -339,9 +344,11 @@ export default function GoogleSheetsSync() {
       const updatedHistory = [newSyncRecord, ...syncHistory];
       setSyncHistory(updatedHistory);
       localStorage.setItem("proplaex_google_sheets_history", JSON.stringify(updatedHistory));
+      state.showToast("ERP Database tables synchronized to Google Sheets successfully!", "success");
     } catch (err: any) {
       console.error("Google Sheets sync aborted:", err);
       setErrorMsg(err?.message || "Critical error exporting data tables to Google Sheets.");
+      state.showToast(`Google Sheets sync failed: ${err?.message || err}`, "error");
     } finally {
       setIsSyncing(false);
     }

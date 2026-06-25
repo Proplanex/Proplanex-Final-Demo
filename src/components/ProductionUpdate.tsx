@@ -33,7 +33,8 @@ interface ProductionUpdateProps {
 
 export default function ProductionUpdate({ readOnly = false }: ProductionUpdateProps) {
   const { 
-    orders, machinePlans, productionLogs, addProductionLog, getPlannedQty, getTotalProduction, deleteProductionLog, canCurrentUserDeleteData 
+    orders, machinePlans, productionLogs, addProductionLog, getPlannedQty, getTotalProduction, deleteProductionLog, canCurrentUserDeleteData,
+    showToast
   } = useAppState();
 
   // Operator Barcode Search input
@@ -138,6 +139,8 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
       qty: qty
     });
 
+    showToast(`Production of ${qty} Kg logged successfully for Job Card ${activePlan.jobCardNo}!`, "success");
+
     // Reset popup
     setActivePlan(null);
     setActiveOrder(null);
@@ -225,6 +228,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
     });
 
     downloadTableAsExcel(excelRows, `PROPLANEX_Production_Entries_${new Date().toISOString().split("T")[0]}`);
+    showToast("Production ledger exported to Excel (.xlsx) successfully!", "success");
   };
 
   return (
@@ -456,6 +460,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                             onClick={() => {
                               if (window.confirm(`Are you sure you want to delete production log for Roll ${rollNumber}?`)) {
                                 deleteProductionLog(log.id);
+                                showToast(`Production entry for Roll ${rollNumber} has been deleted.`, "info");
                               }
                             }}
                             className="text-slate-300 hover:text-red-500 hover:bg-slate-50 p-1 rounded transition-colors cursor-pointer"

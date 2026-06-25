@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { 
   Order, YarnTransaction, MachinePlan, ProductionLog, 
   DeliveryChallan, BillRecord, CompanyProfile, PoweredByProfile, MachineConfig, RunningFactory,
   AppUser, ModulePermissions
 } from "../types";
+import ToastContainer, { ToastMessage } from "../components/ToastContainer";
 import { 
   defaultCompanyProfile, defaultPoweredByProfile, defaultMachines, defaultFactories, 
   defaultOrders, defaultYarnTransactions 
@@ -100,6 +101,7 @@ interface AppContextType {
   retryCloudSync: () => void;
   isLoginScreenReady: boolean;
   isCloudLoaded: boolean;
+  showToast: (message: string, type?: "success" | "error" | "info", duration?: number) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -154,6 +156,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isLoginScreenReady, setIsLoginScreenReady] = useState<boolean>(false);
   const [isCloudLoaded, setIsCloudLoaded] = useState<boolean>(false);
+  
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "info", duration: number = 4000) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, message, type, duration }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
   const [isQuotaExceeded, _setIsQuotaExceeded] = useState<boolean>(() => {
     // Clear legacy localStorage key to self-heal existing browsers
     localStorage.removeItem("pro_firestore_quota_exceeded");
@@ -1649,9 +1662,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isQuotaExceeded,
       retryCloudSync,
       isLoginScreenReady,
-      isCloudLoaded
+      isCloudLoaded,
+      showToast
     }}>
       {children}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </AppContext.Provider>
   );
 };

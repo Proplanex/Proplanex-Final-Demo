@@ -11,7 +11,8 @@ interface PlanningFileProps {
 
 export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
   const { 
-    orders, machinePlans, addMachinePlan, updateMachinePlan, splitMachinePlan, getPlannedQty, machines, companyProfile, poweredByProfile, deleteMachinePlan, canCurrentUserDeleteData 
+    orders, machinePlans, addMachinePlan, updateMachinePlan, splitMachinePlan, getPlannedQty, machines, companyProfile, poweredByProfile, deleteMachinePlan, canCurrentUserDeleteData,
+    showToast
   } = useAppState();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -98,6 +99,8 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
       plannedQty: enteredQty
     });
 
+    showToast("Machine plan and job card created successfully!", "success");
+
     setAssigningOrderNo(null);
   };
 
@@ -157,6 +160,8 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
         plannedQty: enteredQty
       });
 
+      showToast("Job Card updated successfully!", "success");
+
       setAdjustingPlan(null);
       setAdjustingOrder(null);
     } else {
@@ -182,6 +187,8 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
 
       // Perform split
       splitMachinePlan(adjustingPlan.id, keep, splitTargetMachineNo, give);
+
+      showToast("Job Card capacity split and delegated successfully!", "success");
 
       setAdjustingPlan(null);
       setAdjustingOrder(null);
@@ -224,6 +231,7 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
     try {
       setPrintError(null);
       await downloadElementAsPdf("jobcard_print_target", activeJobCard.jobCardNo);
+      showToast(`Job Card ${activeJobCard.jobCardNo} exported to PDF successfully!`, "success");
     } catch (err) {
       console.warn("Direct PDF export failed: ", err);
       setPrintError("Direct PDF export failed. Try opening the app in a standalone tab.");
@@ -402,6 +410,7 @@ export default function PlanningFile({ readOnly = false }: PlanningFileProps) {
                                                   onClick={() => {
                                                     if (window.confirm(`Are you sure you want to delete job card ${plan.jobCardNo}?`)) {
                                                       deleteMachinePlan(plan.id);
+                                                      showToast(`Job Card ${plan.jobCardNo} deleted successfully.`, "info");
                                                     }
                                                   }}
                                                   className="text-slate-350 hover:text-red-500 p-1 hover:bg-slate-100 rounded transition-colors cursor-pointer"

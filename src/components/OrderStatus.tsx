@@ -11,7 +11,8 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
   const { 
     orders, addOrder, updateOrder, getPlannedQty, getYarnReceived, 
     getTotalProduction, getTotalDelivery, updateOrderStatus, factories,
-    machinePlans, productionLogs, machineStatusMap, deleteOrder, canCurrentUserDeleteData
+    machinePlans, productionLogs, machineStatusMap, deleteOrder, canCurrentUserDeleteData,
+    showToast
   } = useAppState();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -98,6 +99,7 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
     };
 
     updateOrder(updatedOrder);
+    showToast("Order specifications updated successfully!", "success");
     setEditingOrder(null);
   };
 
@@ -167,6 +169,8 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
       yarns,
       remarks
     });
+
+    showToast("New production order generated and logged successfully!", "success");
 
     // Reset Form
     setReceiveDate(new Date().toISOString().split("T")[0]);
@@ -397,6 +401,7 @@ export default function OrderStatus({ readOnly = false }: OrderStatusProps) {
                                 onClick={() => {
                                   if (window.confirm(`Are you sure you want to delete order ${order.orderNo}?`)) {
                                     deleteOrder(order.orderNo);
+                                    showToast(`Order ${order.orderNo} deleted successfully.`, "info");
                                   }
                                 }}
                                 className="p-1 text-slate-300 hover:text-red-500 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors"

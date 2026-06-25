@@ -21,7 +21,8 @@ interface DeliveryModuleProps {
 export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps) {
   const { 
     orders, deliveryChallans, addDeliveryChallan, billRecords,
-    getYarnReceived, getTotalProduction, getTotalDelivery, factories, companyProfile, poweredByProfile, deleteDeliveryChallan, canCurrentUserDeleteData 
+    getYarnReceived, getTotalProduction, getTotalDelivery, factories, companyProfile, poweredByProfile, deleteDeliveryChallan, canCurrentUserDeleteData,
+    showToast
   } = useAppState();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -69,6 +70,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
     try {
       setPrintError(null);
       await downloadElementAsPdf("delivery_challan_print_target", activePrintChallan.challanNo);
+      showToast(`Gatepass ${activePrintChallan.challanNo} exported to PDF successfully!`, "success");
     } catch (err) {
       console.warn("Direct PDF export failed: ", err);
       setPrintError("Direct PDF export failed. Try opening the app in a standalone tab.");
@@ -204,6 +206,8 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
         greyItems: validGrey
       });
 
+      showToast(`Grey Fabric Delivery Challan ${nextChallanNo} generated successfully!`, "success");
+
     } else {
       // Validate Yarn Items
       const validYarn: YarnReturnItem[] = [];
@@ -247,6 +251,8 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
         type: "Yarn Return",
         yarnItems: validYarn
       });
+
+      showToast(`Yarn Return Challan ${nextChallanNo} generated successfully!`, "success");
     }
 
     // Reset Form
@@ -374,6 +380,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
     }));
 
     downloadTableAsExcel(data, `PROPLANEX_Delivery_Ledger_${new Date().toISOString().split("T")[0]}`);
+    showToast("Delivery ledger exported to Excel (.xlsx) successfully!", "success");
   };
 
   return (
@@ -537,6 +544,7 @@ export default function DeliveryModule({ readOnly = false }: DeliveryModuleProps
                             onClick={() => {
                               if (window.confirm(`Are you sure you want to delete delivery challan ${row.challanNo}? This will restore the outstanding balance.`)) {
                                 deleteDeliveryChallan(row.challanNo);
+                                showToast(`Delivery challan ${row.challanNo} deleted successfully.`, "info");
                               }
                             }}
                             className="text-slate-300 hover:text-red-500 hover:bg-slate-50 p-1.5 rounded transition-colors cursor-pointer inline-flex items-center"

@@ -9,7 +9,8 @@ interface YarnInventoryProps {
 
 export default function YarnInventory({ readOnly = false }: YarnInventoryProps) {
   const { 
-    orders, yarnTransactions, addYarnTransaction, getYarnReceived, factories, deleteYarnTransaction, canCurrentUserDeleteData 
+    orders, yarnTransactions, addYarnTransaction, getYarnReceived, factories, deleteYarnTransaction, canCurrentUserDeleteData,
+    showToast
   } = useAppState();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -73,6 +74,8 @@ export default function YarnInventory({ readOnly = false }: YarnInventoryProps) 
       spinner: yarnDetail.spinner,
       qty: qtyNum
     });
+
+    showToast(`Yarn ${transactionMode === "Received" ? "receipt" : "return"} of ${qtyNum} Kg logged successfully!`, "success");
 
     setTransactionQty("");
     setShowAddModal(false);
@@ -466,6 +469,7 @@ export default function YarnInventory({ readOnly = false }: YarnInventoryProps) 
                                                 onClick={() => {
                                                   if (window.confirm("Are you sure you want to delete this yarn transaction record?")) {
                                                     deleteYarnTransaction(tx.id);
+                                                    showToast("Yarn transaction deleted successfully.", "info");
                                                   }
                                                 }}
                                                 className="text-slate-355 hover:text-red-500 p-0.5 hover:bg-slate-100 rounded transition-colors"
