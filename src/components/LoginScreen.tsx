@@ -80,21 +80,153 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
         )}
 
         {!isLoginScreenReady ? (
-          <div className="space-y-6 py-6 text-center">
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <div className="relative">
-                <div className="w-16 h-16 rounded-full border-2 border-indigo-500/10 border-t-indigo-500 animate-spin flex items-center justify-center"></div>
-                <div className="absolute inset-0 flex items-center justify-center text-indigo-400">
-                  <Shield className="h-6 w-6 animate-pulse" />
+          <div className="space-y-6 py-4 text-center select-none">
+            {/* Custom SVG Digging Animation */}
+            <div className="relative w-full h-36 flex items-center justify-center overflow-hidden bg-slate-950/60 rounded-2xl border border-slate-800/80 p-4 shadow-inner shadow-indigo-950/20">
+              <style>{`
+                @keyframes swing-pickaxe {
+                  0%, 100% { transform: rotate(0deg); }
+                  50% { transform: rotate(-55deg); }
+                }
+                @keyframes dig-ground {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(2px); }
+                }
+                @keyframes block-scroll {
+                  0% { transform: translateX(110px); opacity: 0; }
+                  10% { opacity: 1; }
+                  90% { opacity: 1; }
+                  100% { transform: translateX(-110px); opacity: 0; }
+                }
+                @keyframes spark-fly-1 {
+                  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+                  30% { opacity: 1; }
+                  100% { transform: translate(-35px, -35px) scale(0); opacity: 0; }
+                }
+                @keyframes spark-fly-2 {
+                  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+                  30% { opacity: 1; }
+                  100% { transform: translate(15px, -30px) scale(0); opacity: 0; }
+                }
+                @keyframes spark-fly-3 {
+                  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+                  30% { opacity: 1; }
+                  100% { transform: translate(-10px, -45px) scale(0); opacity: 0; }
+                }
+                .animate-swing {
+                  animation: swing-pickaxe 0.7s infinite ease-in-out;
+                  transform-origin: 32px 35px;
+                }
+                .animate-dig-body {
+                  animation: dig-ground 0.7s infinite ease-in-out;
+                }
+                .animate-block-1 {
+                  animation: block-scroll 2s infinite linear;
+                }
+                .animate-block-2 {
+                  animation: block-scroll 2s infinite linear;
+                  animation-delay: 0.65s;
+                }
+                .animate-block-3 {
+                  animation: block-scroll 2s infinite linear;
+                  animation-delay: 1.3s;
+                }
+                .animate-spark-1 {
+                  animation: spark-fly-1 0.7s infinite ease-out;
+                }
+                .animate-spark-2 {
+                  animation: spark-fly-2 0.7s infinite ease-out;
+                  animation-delay: 0.1s;
+                }
+                .animate-spark-3 {
+                  animation: spark-fly-3 0.7s infinite ease-out;
+                  animation-delay: 0.2s;
+                }
+              `}</style>
+
+              {/* Sky and ambient background */}
+              <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/20 via-slate-950/40 to-slate-950/90"></div>
+              
+              {/* Retro Digging Landscape */}
+              <div className="relative w-64 h-28 flex items-end justify-center">
+                {/* Soil conveyor scrolling in */}
+                <div className="absolute left-1/2 bottom-2 w-[220px] h-6 overflow-hidden -translate-x-1/2 border-b border-indigo-950/50">
+                  {/* Block 1 */}
+                  <div className="animate-block-1 absolute bottom-0 flex flex-col items-center">
+                    <div className="w-5 h-5 bg-amber-800/70 border border-amber-900 rounded flex items-center justify-center">
+                      <div className="w-1 h-1 bg-amber-900/80 rounded-full"></div>
+                    </div>
+                  </div>
+                  {/* Block 2 */}
+                  <div className="animate-block-2 absolute bottom-0 flex flex-col items-center">
+                    <div className="w-5 h-5 bg-amber-800/70 border border-amber-900 rounded flex items-center justify-center">
+                      <div className="w-1 h-1 bg-amber-900/80 rounded-full"></div>
+                    </div>
+                  </div>
+                  {/* Block 3 */}
+                  <div className="animate-block-3 absolute bottom-0 flex flex-col items-center">
+                    <div className="w-5 h-5 bg-amber-700/80 border border-amber-900 rounded flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-indigo-400 rounded rotate-45 animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Retro Miner SVG character */}
+                <div className="relative z-10 mr-12 mb-2 flex items-end">
+                  <svg className="w-14 h-14 animate-dig-body" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {/* Yellow Hard Hat */}
+                    <path d="M16 28 C16 18, 48 18, 48 28 Z" fill="#FBBF24" />
+                    <rect x="28" y="19" width="8" height="4" fill="#F59E0B" rx="1" />
+                    <circle cx="32" cy="21" r="2" fill="#FFF" className="animate-pulse" />
+                    
+                    {/* Retro Face */}
+                    <rect x="22" y="28" width="20" height="14" fill="#FED7AA" rx="2" />
+                    {/* Eye */}
+                    <rect x="34" y="32" width="3" height="3" fill="#1E293B" />
+                    {/* Retro Mustache */}
+                    <rect x="36" y="35" width="6" height="3" fill="#78350F" />
+                    
+                    {/* Blue Shirt */}
+                    <rect x="20" y="42" width="24" height="16" fill="#4F46E5" rx="3" />
+                    {/* Red Overalls */}
+                    <rect x="24" y="45" width="16" height="13" fill="#EF4444" />
+                    <rect x="26" y="42" width="3" height="3" fill="#EF4444" />
+                    <rect x="35" y="42" width="3" height="3" fill="#EF4444" />
+                    
+                    {/* Arm Rigged */}
+                    <path d="M38 46 Q46 44, 44 38" stroke="#4F46E5" strokeWidth="5" strokeLinecap="round" />
+                    
+                    {/* swinging pickaxe */}
+                    <g className="animate-swing">
+                      <line x1="32" y1="35" x2="52" y2="15" stroke="#78350F" strokeWidth="3" strokeLinecap="round" />
+                      <path d="M46 11 C49 14, 53 19, 56 22 L51 27 C48 24, 44 19, 41 16 Z" fill="#94A3B8" />
+                      <path d="M52 15 L54 13 C56 11, 59 13, 58 16 L56 18 Z" fill="#64748B" />
+                    </g>
+                  </svg>
+                </div>
+
+                {/* Flying sparks from impact */}
+                <div className="absolute left-[54%] bottom-6 z-20">
+                  <div className="animate-spark-1 absolute w-1.5 h-1.5 bg-indigo-400 rotate-45 rounded-sm"></div>
+                  <div className="animate-spark-2 absolute w-1 h-1 bg-amber-400 rounded-full"></div>
+                  <div className="animate-spark-3 absolute w-2 h-2 bg-white rotate-45 rounded-sm"></div>
+                </div>
+
+                {/* Target Block being mined */}
+                <div className="absolute left-[52%] bottom-2 z-10">
+                  <div className="w-7 h-7 bg-indigo-950/40 border border-indigo-500/50 rounded flex items-center justify-center relative overflow-hidden">
+                    <div className="absolute inset-0 bg-indigo-500/10 animate-pulse"></div>
+                    <div className="w-2.5 h-2.5 bg-indigo-400 rounded-sm rotate-45 animate-bounce"></div>
+                  </div>
                 </div>
               </div>
+            </div>
               
-              <div className="space-y-2">
-                <p className="text-white text-xs font-bold font-mono tracking-wider uppercase">SECURE PORTAL HANDSHAKE</p>
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider leading-relaxed max-w-xs mx-auto">
-                  Establishing secure encrypted handshake with central database nodes to synchronize active registries...
-                </p>
-              </div>
+            <div className="space-y-2">
+              <p className="text-white text-xs font-bold font-mono tracking-wider uppercase">SECURE PORTAL HANDSHAKE</p>
+              <p className="text-slate-400 text-[10px] uppercase tracking-wider leading-relaxed max-w-xs mx-auto">
+                Establishing secure encrypted handshake with central database nodes to synchronize active registries...
+              </p>
             </div>
 
             <div className="pt-2 flex flex-col gap-2">
