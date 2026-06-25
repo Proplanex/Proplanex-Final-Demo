@@ -7,7 +7,7 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenProps) {
-  const { loginUser, trialDays, trialExpirationDate, isExpired, isCloudLoaded, retryCloudSync } = useAppState();
+  const { loginUser, trialDays, trialExpirationDate, isExpired, isLoginScreenReady, isCloudLoaded, retryCloudSync, companyProfile } = useAppState();
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -47,9 +47,20 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
         
         {/* Branding header */}
         <div className="text-center space-y-2 mb-8">
-          <div className="inline-flex items-center justify-center p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400 mb-2">
-            <Shield className="h-7 w-7" />
-          </div>
+          {companyProfile?.logoUrl ? (
+            <div className="flex justify-center mb-4">
+              <img 
+                src={companyProfile.logoUrl} 
+                alt={`${companyProfile.name || "Company"} Logo`} 
+                className="h-16 w-auto max-w-[180px] object-contain rounded-xl shadow-lg border border-slate-800 p-1 bg-slate-950/40"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          ) : (
+            <div className="inline-flex items-center justify-center p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400 mb-2">
+              <Shield className="h-7 w-7" />
+            </div>
+          )}
           <h2 className="text-white text-2xl font-bold tracking-tight uppercase flex items-center justify-center gap-2">
             PROPLANEX <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-mono font-bold px-1.5 py-0.5 rounded tracking-widest border border-indigo-500/30">SECURE</span>
           </h2>
@@ -68,7 +79,7 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
           </div>
         )}
 
-        {!isCloudLoaded ? (
+        {!isLoginScreenReady ? (
           <div className="space-y-6 py-6 text-center">
             <div className="flex flex-col items-center justify-center space-y-4">
               <div className="relative">
@@ -145,10 +156,20 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
             {/* Submit Action */}
             <button
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white font-bold py-3 text-xs rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1.5"
+              disabled={!isCloudLoaded}
+              className={`w-full ${!isCloudLoaded ? "bg-indigo-950/80 text-slate-400 border border-indigo-900/30 cursor-wait" : "bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white cursor-pointer"} font-bold py-3 text-xs rounded-xl transition-all flex items-center justify-center gap-2`}
             >
-              <Lock className="h-3.5 w-3.5" />
-              <span>{isExpiredRecovery ? "Authenticate & Renew" : "Request Portal Logging"}</span>
+              {!isCloudLoaded ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-400" />
+                  <span className="font-mono text-[10px] uppercase tracking-wider">Synchronizing registers...</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>{isExpiredRecovery ? "Authenticate & Renew" : "Request Portal Logging"}</span>
+                </>
+              )}
             </button>
           </form>
         )}

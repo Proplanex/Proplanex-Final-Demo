@@ -80,7 +80,8 @@ export const defaultCompanyProfile: CompanyProfile = {
   name: "PROPLANEX APPARELS",
   tagline: "Precious Planning ● Synchronized Production ● Next Gen Intelligence",
   address: "Sectors-4, Road 18, Uttara Commercial Area, Dhaka - 1230",
-  phoneEmail: "Phone: +880 2 8931234 | Email: production@proplanex.com"
+  phoneEmail: "Phone: +880 2 8931234 | Email: production@proplanex.com",
+  logoUrl: "/src/assets/images/proplanex_logo_1782369613053.jpg"
 };
 
 export const defaultPoweredByProfile: PoweredByProfile = {
