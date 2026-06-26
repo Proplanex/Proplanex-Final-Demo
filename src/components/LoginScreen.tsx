@@ -38,12 +38,12 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
       {/* Decorative vector background */}
-      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,rgba(99,102,241,0.08),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(14,165,233,0.05),transparent_50%)] pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,rgba(99,102,241,0.05),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(14,165,233,0.03),transparent_50%)] pointer-events-none" />
 
       {/* Login Container */}
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-8 relative z-10 transition-all duration-300">
+      <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-xl p-8 relative z-10 transition-all duration-300">
         
         {/* Branding header */}
         <div className="text-center space-y-2 mb-8">
@@ -52,29 +52,29 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
               <img 
                 src={companyProfile.logoUrl} 
                 alt={`${companyProfile.name || "Company"} Logo`} 
-                className="h-16 w-auto max-w-[180px] object-contain rounded-xl shadow-lg border border-slate-800 p-1 bg-slate-950/40"
+                className="h-16 w-auto max-w-[180px] object-contain rounded-xl shadow-md border border-slate-200 p-1 bg-slate-50/50"
                 referrerPolicy="no-referrer"
               />
             </div>
           ) : (
-            <div className="inline-flex items-center justify-center p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400 mb-2">
+            <div className="inline-flex items-center justify-center p-3 bg-indigo-50 border border-indigo-100 rounded-2xl text-indigo-600 mb-2">
               <Shield className="h-7 w-7" />
             </div>
           )}
-          <h2 className="text-white text-2xl font-bold tracking-tight uppercase flex items-center justify-center gap-2">
-            PROPLANEX <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-mono font-bold px-1.5 py-0.5 rounded tracking-widest border border-indigo-500/30">SECURE</span>
+          <h2 className="text-slate-900 text-2xl font-bold tracking-tight uppercase flex items-center justify-center gap-2">
+            PROPLANEX <span className="text-[10px] bg-indigo-100 text-indigo-700 font-mono font-bold px-1.5 py-0.5 rounded tracking-widest border border-indigo-200">SECURE</span>
           </h2>
-          <p className="text-slate-400 text-xs uppercase tracking-widest font-semibold">
+          <p className="text-slate-500 text-xs uppercase tracking-widest font-semibold">
             {isExpiredRecovery ? "Workspace Recalibration Node" : "Harnessing Production Accuracy"}
           </p>
         </div>
 
         {(isExpiredRecovery || isExpired) && (
-          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl mb-6 text-red-300 text-xs flex items-start gap-2.5 leading-relaxed">
-            <AlertCircle className="h-4.5 w-4.5 text-red-400 shrink-0 mt-0.5" />
+          <div className="p-3 bg-red-50 border border-red-250 rounded-xl mb-6 text-red-700 text-xs flex items-start gap-2.5 leading-relaxed">
+            <AlertCircle className="h-4.5 w-4.5 text-red-600 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold">License Working Limit Exceeded</p>
-              <p className="opacity-80 mt-0.5">Your trial session has been expired. Please contact with your supplier to renew the session.</p>
+              <p className="opacity-90 mt-0.5">Your trial session has been expired. Please contact with your supplier to renew the session.</p>
             </div>
           </div>
         )}
@@ -82,7 +82,7 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
         {!isLoginScreenReady ? (
           <div className="space-y-6 py-4 text-center select-none">
             {/* Custom SVG Digging Animation */}
-            <div className="relative w-full h-36 flex items-center justify-center overflow-hidden bg-slate-950/60 rounded-2xl border border-slate-800/80 p-4 shadow-inner shadow-indigo-950/20">
+            <div className="relative w-full h-36 flex items-center justify-center overflow-hidden bg-slate-50 rounded-2xl border border-slate-200 p-4 shadow-inner">
               <style>{`
                 @keyframes swing-pickaxe {
                   0%, 100% { transform: rotate(0deg); }
@@ -145,12 +145,12 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
               `}</style>
 
               {/* Sky and ambient background */}
-              <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/20 via-slate-950/40 to-slate-950/90"></div>
+              <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/30 via-slate-50/50 to-slate-100/90"></div>
               
               {/* Retro Digging Landscape */}
               <div className="relative w-64 h-28 flex items-end justify-center">
                 {/* Soil conveyor scrolling in */}
-                <div className="absolute left-1/2 bottom-2 w-[220px] h-6 overflow-hidden -translate-x-1/2 border-b border-indigo-950/50">
+                <div className="absolute left-1/2 bottom-2 w-[220px] h-6 overflow-hidden -translate-x-1/2 border-b border-slate-200">
                   {/* Block 1 */}
                   <div className="animate-block-1 absolute bottom-0 flex flex-col items-center">
                     <div className="w-5 h-5 bg-amber-800/70 border border-amber-900 rounded flex items-center justify-center">
@@ -214,17 +214,17 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
 
                 {/* Target Block being mined */}
                 <div className="absolute left-[52%] bottom-2 z-10">
-                  <div className="w-7 h-7 bg-indigo-950/40 border border-indigo-500/50 rounded flex items-center justify-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-indigo-500/10 animate-pulse"></div>
-                    <div className="w-2.5 h-2.5 bg-indigo-400 rounded-sm rotate-45 animate-bounce"></div>
+                  <div className="w-7 h-7 bg-indigo-50 border border-indigo-200 rounded flex items-center justify-center relative overflow-hidden">
+                    <div className="absolute inset-0 bg-indigo-500/5 animate-pulse"></div>
+                    <div className="w-2.5 h-2.5 bg-indigo-500 rounded-sm rotate-45 animate-bounce"></div>
                   </div>
                 </div>
               </div>
             </div>
               
             <div className="space-y-2">
-              <p className="text-white text-xs font-bold font-mono tracking-wider uppercase">SECURE PORTAL HANDSHAKE</p>
-              <p className="text-slate-400 text-[10px] uppercase tracking-wider leading-relaxed max-w-xs mx-auto">
+              <p className="text-slate-800 text-xs font-bold font-mono tracking-wider uppercase">SECURE PORTAL HANDSHAKE</p>
+              <p className="text-slate-500 text-[10px] uppercase tracking-wider leading-relaxed max-w-xs mx-auto">
                 Establishing secure encrypted handshake with central database nodes to synchronize active registries...
               </p>
             </div>
@@ -233,9 +233,9 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
               <button
                 type="button"
                 onClick={retryCloudSync}
-                className="w-full bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 font-mono font-bold py-2.5 text-[10px] rounded-xl cursor-pointer transition-all uppercase tracking-wider flex items-center justify-center gap-1.5"
+                className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-750 font-mono font-bold py-2.5 text-[10px] rounded-xl cursor-pointer transition-all uppercase tracking-wider flex items-center justify-center gap-1.5"
               >
-                <Loader2 className="h-3 w-3 animate-spin text-indigo-400" />
+                <Loader2 className="h-3 w-3 animate-spin text-indigo-600" />
                 <span>Retry Connection handshake</span>
               </button>
             </div>
@@ -244,12 +244,12 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
           <form onSubmit={handleLogin} className="space-y-5">
             {/* User ID Field */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-slate-400 font-mono uppercase tracking-wider font-bold">User Identifier</label>
+              <label className="block text-[10px] text-slate-500 font-mono uppercase tracking-wider font-bold">User Identifier</label>
               <div className="relative">
                 <input
                   type="text"
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 text-xs text-white placeholder-slate-650 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden font-mono transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden font-mono transition-all"
                   placeholder={isExpiredRecovery ? "superadmin" : "e.g. admin@proplanex.com"}
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
@@ -259,12 +259,12 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
 
             {/* Password Field */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-slate-400 font-mono uppercase tracking-wider font-bold">Secure Access Keys</label>
+              <label className="block text-[10px] text-slate-500 font-mono uppercase tracking-wider font-bold">Secure Access Keys</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-4 pr-11 text-xs text-white placeholder-slate-650 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden font-mono transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-4 pr-11 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden font-mono transition-all"
                   placeholder={isExpiredRecovery ? "Proplanex@Raihan" : "••••••••••••"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -272,7 +272,7 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -280,7 +280,7 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
             </div>
 
             {errorMsg && (
-              <div className="text-[11px] font-semibold text-red-400 bg-red-950/35 border border-red-900/50 p-2.5 rounded-lg flex items-center gap-1.5 animate-pulse">
+              <div className="text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 p-2.5 rounded-lg flex items-center gap-1.5 animate-pulse">
                 <p>⚠️ {errorMsg}</p>
               </div>
             )}
@@ -289,12 +289,12 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
             <button
               type="submit"
               disabled={!isCloudLoaded}
-              className={`w-full ${!isCloudLoaded ? "bg-indigo-950/80 text-slate-400 border border-indigo-900/30 cursor-wait" : "bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white cursor-pointer"} font-bold py-3 text-xs rounded-xl transition-all flex items-center justify-center gap-2`}
+              className={`w-full ${!isCloudLoaded ? "bg-indigo-50 text-indigo-400 border border-indigo-100 cursor-wait" : "bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white cursor-pointer shadow-md shadow-indigo-100"} font-bold py-3 text-xs rounded-xl transition-all flex items-center justify-center gap-2`}
             >
               {!isCloudLoaded ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-400" />
-                  <span className="font-mono text-[10px] uppercase tracking-wider">Synchronizing registers...</span>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-500" />
+                  <span className="font-mono text-[10px] text-indigo-600 uppercase tracking-wider">Synchronizing registers...</span>
                 </>
               ) : (
                 <>
@@ -309,7 +309,7 @@ export default function LoginScreen({ isExpiredRecovery = false }: LoginScreenPr
 
       </div>
 
-      <div className="mt-6 text-slate-550 text-[9px] font-mono tracking-widest text-center">
+      <div className="mt-6 text-slate-400 text-[9px] font-mono tracking-widest text-center">
         PROPLANEX APPARELS WORKSPACE SYSTEM &copy; 2026. ALL RIGHTS RESERVED.
       </div>
     </div>
