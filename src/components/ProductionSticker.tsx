@@ -104,9 +104,20 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
       {/* Dynamic PRINT override stylesheet tailored for the user's custom thermal sticker label size */}
       <style>{`
         @media print {
-          /* Hide normal screen app layout */
-          #pro_app_root, #pro_nav, header, #pro_main, .no-print, button, .editor-panel, .settings-panel {
+          /* Hide non-printable panels completely from layout */
+          #pro_nav, header, .no-print, button, .editor-panel, .settings-panel {
             display: none !important;
+          }
+          /* Reset root containers to be transparent/un-styled so they don't break page size */
+          #pro_app_root, #pro_main {
+            display: block !important;
+            position: static !important;
+            background: transparent !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
           }
           /* Hide everything in body first */
           body * {
