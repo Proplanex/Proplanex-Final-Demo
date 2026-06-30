@@ -108,20 +108,23 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
           #pro_app_root, #pro_nav, header, #pro_main, .no-print, button, .editor-panel, .settings-panel {
             display: none !important;
           }
-          /* Show ONLY the sticker container on white background */
-          body {
-            background: #ffffff !important;
-            color: #000000 !important;
-            margin: 0 !important;
-            padding: 0 !important;
+          /* Hide everything in body first */
+          body * {
+            visibility: hidden !important;
           }
+          /* Show ONLY the sticker card and its nested children */
+          .sticker-card, .sticker-card * {
+            visibility: visible !important;
+          }
+          /* Show ONLY the printable sticker modal overlay but render it transparent */
           .printable-sticker-modal {
+            visibility: visible !important;
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
             height: auto !important;
-            background: #ffffff !important;
+            background: transparent !important;
             padding: 0 !important;
             margin: 0 !important;
             display: block !important;
@@ -129,12 +132,21 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
             border: none !important;
             box-shadow: none !important;
           }
+          body {
+            background: #ffffff !important;
+            color: #000000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
           .sticker-card {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
             width: ${width}in !important;
             height: ${height}in !important;
             border: none !important;
             box-shadow: none !important;
-            margin: 0 auto !important;
+            margin: 0 !important;
             padding: 0.05in !important;
             box-sizing: border-box !important;
             page-break-inside: avoid !important;
@@ -152,7 +164,7 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
         }
       `}</style>
 
-      <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-4xl w-full p-6 no-print flex flex-col md:flex-row gap-6">
+      <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-4xl w-full p-6 flex flex-col md:flex-row gap-6">
         
         {/* Left Column: Dimensions Tuning & Silent Printing Guide */}
         <div className="flex-1 space-y-5">
@@ -270,7 +282,7 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
 
         {/* Right Column: Live Sticker Preview (2.50" x 1.90" aspect ratio, non-editable) */}
         <div className="w-full md:w-[320px] flex flex-col items-center justify-between border-t md:border-t-0 md:border-l border-slate-200 pt-6 md:pt-0 md:pl-6">
-          <div className="flex items-center justify-between w-full mb-3">
+          <div className="flex items-center justify-between w-full mb-3 no-print">
             <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">Live Preview</span>
             <button
               type="button"
@@ -282,7 +294,7 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
           </div>
 
           {/* Actual Scaled Down Sticker Box */}
-          <div className="bg-slate-100 p-4 rounded-xl border border-slate-200 w-full flex justify-center mb-5">
+          <div className="bg-slate-100 p-4 rounded-xl border border-slate-200 w-full flex justify-center mb-5 print-bg-transparent">
             <div 
               style={{
                 fontSize: `${9 * fontScale}px`,
@@ -346,7 +358,7 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col gap-2 w-full">
+          <div className="flex flex-col gap-2 w-full no-print">
             <button
               onClick={handlePrint}
               className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold py-3 px-4 rounded-xl text-xs transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-700/10"

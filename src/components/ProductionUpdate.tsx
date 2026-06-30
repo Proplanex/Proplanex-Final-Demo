@@ -577,7 +577,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
         };
 
         return (
-          <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-xs flex items-start justify-center p-4 z-50 overflow-y-auto pt-4 md:pt-10 pb-10">
+          <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-xs flex items-start justify-center p-4 z-50 overflow-y-auto pt-4 md:pt-10 pb-10 printable-sticker-modal">
             {/* Dynamic PRINT override stylesheet tailored for the user's custom thermal sticker label size */}
             <style>{`
               @media print {
@@ -585,20 +585,23 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                 #pro_app_root, #pro_nav, header, #pro_main, .no-print, button, form, input, select, .editor-panel, .settings-panel {
                   display: none !important;
                 }
-                /* Show ONLY the sticker card on white background */
-                body {
-                  background: #ffffff !important;
-                  color: #000000 !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
+                /* Hide everything in body first */
+                body * {
+                  visibility: hidden !important;
                 }
+                /* Show ONLY the sticker card and its nested children */
+                .sticker-card, .sticker-card * {
+                  visibility: visible !important;
+                }
+                /* Show ONLY the printable sticker modal overlay but render it transparent */
                 .printable-sticker-modal {
+                  visibility: visible !important;
                   position: absolute !important;
                   left: 0 !important;
                   top: 0 !important;
                   width: 100% !important;
                   height: auto !important;
-                  background: #ffffff !important;
+                  background: transparent !important;
                   padding: 0 !important;
                   margin: 0 !important;
                   display: block !important;
@@ -606,12 +609,21 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                   border: none !important;
                   box-shadow: none !important;
                 }
+                body {
+                  background: #ffffff !important;
+                  color: #000000 !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
                 .sticker-card {
+                  position: fixed !important;
+                  left: 0 !important;
+                  top: 0 !important;
                   width: ${stickerWidth}in !important;
                   height: ${stickerHeight}in !important;
                   border: none !important;
                   box-shadow: none !important;
-                  margin: 0 auto !important;
+                  margin: 0 !important;
                   padding: 0.05in !important;
                   box-sizing: border-box !important;
                   page-break-inside: avoid !important;
@@ -629,8 +641,8 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
               }
             `}</style>
 
-            <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-5xl w-full overflow-hidden no-print">
-              <div className="bg-slate-900 text-white py-4 px-6 flex items-center justify-between">
+            <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-5xl w-full overflow-hidden">
+              <div className="bg-slate-900 text-white py-4 px-6 flex items-center justify-between no-print">
                 <div className="flex items-center gap-2">
                   <Barcode className="h-5 w-5 text-indigo-400" />
                   <h3 className="font-mono font-bold text-sm tracking-wide">Barcode Match: {activePlan.jobCardNo}</h3>
@@ -646,7 +658,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
 
               <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-150">
                 {/* Left Side: Form entry & details */}
-                <form onSubmit={handleSaveProduction} className="flex-1 p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                <form onSubmit={handleSaveProduction} className="flex-1 p-6 space-y-4 max-h-[75vh] overflow-y-auto no-print">
                   {/* Ticket details summary */}
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-150 text-xs space-y-2.5 text-slate-650">
                     <p className="text-[10px] font-mono text-indigo-600 font-bold uppercase tracking-wider mb-2">Validated Job Specs</p>
@@ -794,7 +806,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
 
                 {/* Right Side: Live Thermal Sticker Preview (Non-Editable) */}
                 <div className="w-full md:w-[410px] bg-slate-50 p-6 flex flex-col items-center border-t md:border-t-0 md:border-l border-slate-200 overflow-y-auto max-h-[75vh]">
-                  <span className="text-slate-400 text-[10px] font-mono mb-3 uppercase tracking-wider font-semibold">Live Sticker Preview ({stickerWidth.toFixed(2)}" x {stickerHeight.toFixed(2)}")</span>
+                  <span className="text-slate-400 text-[10px] font-mono mb-3 uppercase tracking-wider font-semibold no-print">Live Sticker Preview ({stickerWidth.toFixed(2)}" x {stickerHeight.toFixed(2)}")</span>
 
                   {/* Sticker Container */}
                   <div 
@@ -857,7 +869,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                   </div>
 
                   {/* Dimension Tuning Controls directly inside the preview area */}
-                  <div className="w-full max-w-[280px] bg-white border border-slate-200 rounded-xl p-3 mb-4 space-y-3 shadow-xs">
+                  <div className="w-full max-w-[280px] bg-white border border-slate-200 rounded-xl p-3 mb-4 space-y-3 shadow-xs no-print">
                     <span className="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-wider block">Manual Dimension Adjuster</span>
                     
                     {/* Presets */}
@@ -942,12 +954,12 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                   <button
                     type="button"
                     onClick={handlePopupPrint}
-                    className="w-full max-w-[280px] bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-700/10"
+                    className="w-full max-w-[280px] bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-700/10 no-print"
                   >
                     <Printer className="h-4 w-4" />
                     <span>Print Sticker Only</span>
                   </button>
-                  <p className="text-[10px] text-slate-400 mt-2 text-center max-w-[280px]">
+                  <p className="text-[10px] text-slate-400 mt-2 text-center max-w-[280px] no-print">
                     Tip: In Chrome's print popup, set margins to <strong>None</strong> and uncheck <strong>Headers and Footers</strong> for a perfect 2.50" x 1.90" fit!
                   </p>
                 </div>
