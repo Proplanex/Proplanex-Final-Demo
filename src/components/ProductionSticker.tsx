@@ -108,8 +108,16 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
           #pro_nav, header, .no-print, button, .editor-panel, .settings-panel {
             display: none !important;
           }
-          /* Reset root containers to be transparent/un-styled so they don't break page size */
-          #pro_app_root, #pro_main {
+          /* Reset root containers to be transparent/un-styled with no extra spacing or flow height */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            height: auto !important;
+            min-height: 0 !important;
+          }
+          #pro_app_root, #pro_main, .printable-sticker-modal {
             display: block !important;
             position: static !important;
             background: transparent !important;
@@ -118,39 +126,24 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
             height: auto !important;
             min-height: 0 !important;
             overflow: visible !important;
-          }
-          /* Hide everything in body first */
-          body * {
-            visibility: hidden !important;
-          }
-          /* Show ONLY the sticker card and its nested children */
-          .sticker-card, .sticker-card * {
-            visibility: visible !important;
-          }
-          /* Show ONLY the printable sticker modal overlay but render it transparent */
-          .printable-sticker-modal {
-            visibility: visible !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            height: auto !important;
-            background: transparent !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            display: block !important;
-            backdrop-filter: none !important;
             border: none !important;
             box-shadow: none !important;
           }
-          body {
-            background: #ffffff !important;
-            color: #000000 !important;
-            margin: 0 !important;
+          /* Remove layout/shadow constraints from the main modal container */
+          .printable-sticker-modal > div {
+            border: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
             padding: 0 !important;
+            margin: 0 !important;
+            width: auto !important;
+            max-width: none !important;
+            height: auto !important;
           }
+          /* Render ONLY the sticker card precisely at the top-left */
           .sticker-card {
-            position: fixed !important;
+            display: block !important;
+            position: absolute !important;
             left: 0 !important;
             top: 0 !important;
             width: ${width}in !important;
@@ -161,8 +154,8 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
             padding: 0.05in !important;
             box-sizing: border-box !important;
             page-break-inside: avoid !important;
-            page-break-after: always !important;
-            background: white !important;
+            page-break-after: avoid !important;
+            background: #ffffff !important;
             font-size: ${9 * fontScale}px !important;
             line-height: 1.1 !important;
           }
@@ -175,10 +168,10 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
         }
       `}</style>
 
-      <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-4xl w-full p-6 flex flex-col md:flex-row gap-6">
+      <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-4xl w-full p-6 flex flex-col md:flex-row gap-6 print:border-none print:shadow-none print:p-0 print:m-0 print:bg-transparent">
         
         {/* Left Column: Dimensions Tuning & Silent Printing Guide */}
-        <div className="flex-1 space-y-5">
+        <div className="flex-1 space-y-5 no-print">
           <div className="flex items-center justify-between border-b border-slate-150 pb-3">
             <h4 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-2">
               <Settings className="h-4 w-4 text-indigo-500" />
@@ -292,7 +285,7 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
         </div>
 
         {/* Right Column: Live Sticker Preview (2.50" x 1.90" aspect ratio, non-editable) */}
-        <div className="w-full md:w-[320px] flex flex-col items-center justify-between border-t md:border-t-0 md:border-l border-slate-200 pt-6 md:pt-0 md:pl-6">
+        <div className="w-full md:w-[320px] flex flex-col items-center justify-between border-t md:border-t-0 md:border-l border-slate-200 pt-6 md:pt-0 md:pl-6 print:border-none print:p-0 print:m-0 print:w-auto print:h-auto">
           <div className="flex items-center justify-between w-full mb-3 no-print">
             <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">Live Preview</span>
             <button
@@ -305,7 +298,7 @@ export default function ProductionSticker({ log, onClose }: ProductionStickerPro
           </div>
 
           {/* Actual Scaled Down Sticker Box */}
-          <div className="bg-slate-100 p-4 rounded-xl border border-slate-200 w-full flex justify-center mb-5 print-bg-transparent">
+          <div className="bg-slate-100 p-4 rounded-xl border border-slate-200 w-full flex justify-center mb-5 print-bg-transparent print:p-0 print:m-0 print:border-none print:bg-transparent">
             <div 
               style={{
                 fontSize: `${9 * fontScale}px`,

@@ -585,8 +585,16 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                 #pro_nav, header, .no-print, button, form, input, select, .editor-panel, .settings-panel {
                   display: none !important;
                 }
-                /* Reset root containers to be transparent/un-styled so they don't break page size */
-                #pro_app_root, #pro_main {
+                /* Reset root containers to be transparent/un-styled with no extra spacing or flow height */
+                html, body {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  background: #ffffff !important;
+                  color: #000000 !important;
+                  height: auto !important;
+                  min-height: 0 !important;
+                }
+                #pro_app_root, #pro_main, .printable-sticker-modal {
                   display: block !important;
                   position: static !important;
                   background: transparent !important;
@@ -595,39 +603,24 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                   height: auto !important;
                   min-height: 0 !important;
                   overflow: visible !important;
-                }
-                /* Hide everything in body first */
-                body * {
-                  visibility: hidden !important;
-                }
-                /* Show ONLY the sticker card and its nested children */
-                .sticker-card, .sticker-card * {
-                  visibility: visible !important;
-                }
-                /* Show ONLY the printable sticker modal overlay but render it transparent */
-                .printable-sticker-modal {
-                  visibility: visible !important;
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
-                  width: 100% !important;
-                  height: auto !important;
-                  background: transparent !important;
-                  padding: 0 !important;
-                  margin: 0 !important;
-                  display: block !important;
-                  backdrop-filter: none !important;
                   border: none !important;
                   box-shadow: none !important;
                 }
-                body {
-                  background: #ffffff !important;
-                  color: #000000 !important;
-                  margin: 0 !important;
+                /* Remove layout/shadow constraints from the main modal container */
+                .printable-sticker-modal > div {
+                  border: none !important;
+                  box-shadow: none !important;
+                  background: transparent !important;
                   padding: 0 !important;
+                  margin: 0 !important;
+                  width: auto !important;
+                  max-width: none !important;
+                  height: auto !important;
                 }
+                /* Render ONLY the sticker card precisely at the top-left */
                 .sticker-card {
-                  position: fixed !important;
+                  display: block !important;
+                  position: absolute !important;
                   left: 0 !important;
                   top: 0 !important;
                   width: ${stickerWidth}in !important;
@@ -638,8 +631,8 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                   padding: 0.05in !important;
                   box-sizing: border-box !important;
                   page-break-inside: avoid !important;
-                  page-break-after: always !important;
-                  background: white !important;
+                  page-break-after: avoid !important;
+                  background: #ffffff !important;
                   font-size: ${9 * stickerFontScale}px !important;
                   line-height: 1.1 !important;
                 }
@@ -652,7 +645,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
               }
             `}</style>
 
-            <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-5xl w-full overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-5xl w-full overflow-hidden print:border-none print:shadow-none print:p-0 print:m-0 print:bg-transparent">
               <div className="bg-slate-900 text-white py-4 px-6 flex items-center justify-between no-print">
                 <div className="flex items-center gap-2">
                   <Barcode className="h-5 w-5 text-indigo-400" />
@@ -816,7 +809,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                 </form>
 
                 {/* Right Side: Live Thermal Sticker Preview (Non-Editable) */}
-                <div className="w-full md:w-[410px] bg-slate-50 p-6 flex flex-col items-center border-t md:border-t-0 md:border-l border-slate-200 overflow-y-auto max-h-[75vh]">
+                <div className="w-full md:w-[410px] bg-slate-50 p-6 flex flex-col items-center border-t md:border-t-0 md:border-l border-slate-200 overflow-y-auto max-h-[75vh] print:border-none print:p-0 print:m-0 print:w-auto print:h-auto print:bg-transparent">
                   <span className="text-slate-400 text-[10px] font-mono mb-3 uppercase tracking-wider font-semibold no-print">Live Sticker Preview ({stickerWidth.toFixed(2)}" x {stickerHeight.toFixed(2)}")</span>
 
                   {/* Sticker Container */}
