@@ -1,8 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAppState } from "../context/AppContext";
 import { Order, MachinePlan, ProductionLog } from "../types";
-import { Search, Barcode, Calendar, FileDown, Plus, Clipboard, CheckCircle, Smartphone, Trash2 } from "lucide-react";
+import { Search, Barcode, Calendar, FileDown, Plus, Clipboard, CheckCircle, Smartphone, Trash2, Printer, X } from "lucide-react";
 import { downloadTableAsExcel } from "../utils/helpers";
+import ProductionSticker from "./ProductionSticker";
+import JsBarcode from "jsbarcode";
+
+// Custom helper to generate barcode via jsbarcode inside an SVG for live preview
+const BarcodeImage: React.FC<{ value: string }> = ({ value }) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (svgRef.current && value) {
+      try {
+        JsBarcode(svgRef.current, value, {
+          format: "CODE128",
+          height: 38,
+          width: 1.8,
+          displayValue: false,
+          margin: 0,
+          background: "transparent",
+        });
+      } catch (err) {
+        console.error("Barcode generation error:", err);
+      }
+    }
+  }, [value]);
+
+  return (
+    <div className="flex justify-center items-center py-1">
+      <svg ref={svgRef} className="max-w-full h-11" />
+    </div>
+  );
+};
 
 const getShiftFromTimeStr = (dateTimeString: string): "A" | "B" | "C" => {
   try {
@@ -34,13 +64,14 @@ interface ProductionUpdateProps {
 export default function ProductionUpdate({ readOnly = false }: ProductionUpdateProps) {
   const { 
     orders, machinePlans, productionLogs, addProductionLog, getPlannedQty, getTotalProduction, deleteProductionLog, canCurrentUserDeleteData,
-    showToast
+    showToast, currentUser
   } = useAppState();
 
   // Operator Barcode Search input
   const [barcodeInput, setBarcodeInput] = useState("");
   const [activePlan, setActivePlan] = useState<MachinePlan | null>(null);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+  const [stickerLog, setStickerLog] = useState<ProductionLog | null>(null);
 
   // Filters for ledger
   const [filterOrderNo, setFilterOrderNo] = useState("");
@@ -130,14 +161,18 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
     }
 
     // Save production entry
-    addProductionLog({
+    const generatedLogId = `PL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const tempLog: ProductionLog = {
+      id: generatedLogId,
       date: dateTimeStr.replace("T", " "),
       orderNo: activePlan.orderNo,
       jobCardNo: activePlan.jobCardNo,
       machineNo: activePlan.machineNo,
       shift: selectedShift,
       qty: qty
-    });
+    };
+
+    addProductionLog(tempLog);
 
     showToast(`Production of ${qty} Kg logged successfully for Job Card ${activePlan.jobCardNo}!`, "success");
 
@@ -366,7 +401,7 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
               <col className="w-[120px]" />
               <col className="w-[120px]" />
               <col className="w-[100px]" />
-              <col className="w-[140px]" />
+              <col className="w-[190px]" />
               <col className="w-[120px]" />
             </colgroup>
             <thead className="sticky top-0 z-20">
@@ -452,7 +487,17 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                       <td className="py-3 px-3 text-slate-500 truncate" title={combinedLot}>{combinedLot}</td>
                       <td className="py-3 px-3 text-slate-500 truncate" title={combinedSpinner}>{combinedSpinner}</td>
                       <td className="py-3 px-3 text-slate-500 truncate" title={combinedSL}>{combinedSL}</td>
-                      <td className="py-3 px-3 font-bold text-indigo-700 whitespace-nowrap truncate">{rollNumber}</td>
+                      <td className="py-2 px-3 font-bold text-indigo-700 whitespace-nowrap truncate flex items-center justify-between gap-1 group">
+                        <span className="truncate">{rollNumber}</span>
+                        <button
+                          onClick={() => setStickerLog(log)}
+                          className="no-print bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-sans flex items-center gap-1 transition-all shrink-0 hover:scale-102 active:scale-95 cursor-pointer font-bold"
+                          title="Reprint Thermal Sticker"
+                        >
+                          <Printer className="h-3 w-3" />
+                          <span>Reprint</span>
+                        </button>
+                      </td>
                       <td className="py-3 px-3 text-right font-bold text-slate-900 text-sm whitespace-nowrap">{log.qty.toLocaleString()} Kg</td>
                       {canCurrentUserDeleteData() && (
                         <td className="py-3 px-3 text-center">
@@ -480,170 +525,335 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
       </div>
 
       {/* PRODUCTION LOG ENTRY POPUP DIALOG */}
-      {activePlan && activeOrder && (
-        <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-xs flex items-start justify-center p-4 z-50 overflow-y-auto pt-4 md:pt-10 pb-10">
-          <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-lg w-full overflow-hidden">
-            <div className="bg-slate-900 text-white py-4 px-6 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Barcode className="h-5 w-5 text-indigo-400" />
-                <h3 className="font-mono font-bold text-sm tracking-wide">Barcode Match: {activePlan.jobCardNo}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setActivePlan(null); setActiveOrder(null); }}
-                className="text-slate-400 hover:text-white text-xl font-bold cursor-pointer"
-              >
-                &times;
-              </button>
-            </div>
+      {activePlan && activeOrder && (() => {
+        const nextRollIndex = productionLogs.filter(l => l.jobCardNo === activePlan.jobCardNo).length + 1;
+        const nextRollNo = `${activePlan.jobCardNo}_${String(nextRollIndex).padStart(2, "0")}`;
+        const opName = currentUser ? currentUser.userId.split("@")[0].toUpperCase() : "OPERATOR";
+        const operatorText = `${opName}-${activePlan.machineNo}`;
 
-            <form onSubmit={handleSaveProduction} className="p-6 space-y-4">
-              {/* Ticket details summary */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs space-y-2.5 text-slate-650">
-                <p className="text-[10px] font-mono text-indigo-600 font-bold uppercase tracking-wider mb-2">Validated Job Specs</p>
-                <div className="grid grid-cols-2 gap-y-1.5 gap-x-4">
-                  <p><span className="text-slate-400">Machine Number:</span> <strong className="text-slate-800">{activePlan.machineNo}</strong></p>
-                  <p><span className="text-slate-400">Order Number:</span> <strong className="text-slate-800">{activePlan.orderNo}</strong></p>
-                  <p><span className="text-slate-400">Factory Name:</span> <strong className="text-slate-800">{activeOrder.factoryName}</strong></p>
-                  <p><span className="text-slate-400">Factory Order:</span> <strong className="text-slate-800">{activeOrder.factoryOrder}</strong></p>
-                  <p><span className="text-slate-400">Fabric Type:</span> <strong className="text-slate-800">{activeOrder.fabricType}</strong></p>
-                  <p><span className="text-slate-400">Dia x GG:</span> <strong className="text-slate-800">{activeOrder.diaGG}</strong></p>
-                  <p><span className="text-slate-400">Color Variant:</span> <strong className="text-slate-800">{activeOrder.color}</strong></p>
-                  <p><span className="text-slate-400">Finish GSM:</span> <strong className="text-slate-800">{activeOrder.finishGSM} GSM</strong></p>
-                  <p><span className="text-slate-400">Finish Dia:</span> <strong className="text-slate-800">{activeOrder.finishDia}''{activeOrder.knitType ? ` ${activeOrder.knitType}` : ""}</strong></p>
-                  <p><span className="text-slate-400">Factory Job No:</span> <strong className="text-slate-800">{activeOrder.factoryJobNo}</strong></p>
-                </div>
+        // Yarn properties with fallback
+        const firstYarn = activeOrder.yarns?.[0];
+        const yarnCount = firstYarn?.yc || "40s BCI PIMA";
+        const yarnSpinner = firstYarn?.spinner || "PRECOT";
+        const yarnLot = firstYarn?.lot || "256860";
+        const stitchLength = firstYarn?.sl || "1.75";
 
-                {/* Yarn segment details block */}
-                <div className="border-t border-slate-200 mt-3 pt-3 space-y-1.5">
-                  <p className="text-[10px] font-mono text-slate-500 font-bold uppercase">Yarn Setup Specifications</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px] bg-white p-2 rounded-lg border border-slate-100">
-                    <div>
-                      <span className="text-slate-405 block uppercase">Segment 1</span>
-                      <p className="font-semibold text-slate-800">{activeOrder.yarns?.[0]?.yc || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">L: {activeOrder.yarns?.[0]?.lot || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">S: {activeOrder.yarns?.[0]?.spinner || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">SL: {activeOrder.yarns?.[0]?.sl || "-"}</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-405 block uppercase">Segment 2</span>
-                      <p className="font-semibold text-slate-800">{activeOrder.yarns?.[1]?.yc || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">L: {activeOrder.yarns?.[1]?.lot || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">S: {activeOrder.yarns?.[1]?.spinner || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">SL: {activeOrder.yarns?.[1]?.sl || "-"}</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-405 block uppercase">Segment 3</span>
-                      <p className="font-semibold text-slate-800">{activeOrder.yarns?.[2]?.yc || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">L: {activeOrder.yarns?.[2]?.lot || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">S: {activeOrder.yarns?.[2]?.spinner || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">SL: {activeOrder.yarns?.[2]?.sl || "-"}</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-405 block uppercase">Segment 4</span>
-                      <p className="font-semibold text-slate-800">{activeOrder.yarns?.[3]?.yc || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">L: {activeOrder.yarns?.[3]?.lot || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">S: {activeOrder.yarns?.[3]?.spinner || "-"}</p>
-                      <p className="text-slate-400 font-mono text-[9px]">SL: {activeOrder.yarns?.[3]?.sl || "-"}</p>
-                    </div>
-                  </div>
+        const fabricType = activeOrder.fabricType || "Twill Jersey";
+        const knitType = activeOrder.knitType || "Blade Open";
+        const factoryJobNo = activeOrder.factoryJobNo || "EKL-05-34x34,70";
+        const factoryOrder = activeOrder.factoryOrder || "264712-FBR";
+        const factoryName = activeOrder.factoryName || "Tommy Hilfiger";
+        const color = activeOrder.color || "BLACK";
+        const finishGSM = activeOrder.finishGSM || 210;
+        const finishDia = activeOrder.finishDia || 40;
 
-                  <div className="grid grid-cols-1 gap-1 text-[11px] text-slate-600 font-mono bg-indigo-50/40 p-2 rounded-lg border border-indigo-100/50 mt-2">
-                    <p><span className="text-slate-400 font-bold">Yarn (YC1+YC2+YC3+YC4):</span> {activeOrder.yarns?.map(y => y.yc).filter(Boolean).join("+") || "-"}</p>
-                    <p><span className="text-slate-400 font-bold">Lot (Lot1+Lot2+Lot3+Lot4):</span> {activeOrder.yarns?.map(y => y.lot).filter(Boolean).join("+") || "-"}</p>
-                    <p><span className="text-slate-400 font-bold">Spinner (Spinner1+Spinner2+Spinner3+Spinner4):</span> {activeOrder.yarns?.map(y => y.spinner).filter(Boolean).join("+") || "-"}</p>
-                    <p><span className="text-slate-400 font-bold">SL (S/L1+S/L2+S/L3+S/L4):</span> {activeOrder.yarns?.map(y => y.sl).filter(Boolean).join("+") || "-"}</p>
-                  </div>
-                </div>
+        // Compute current live weight string
+        const currentWeightNum = Number(entryQty);
+        const liveWeightStr = isNaN(currentWeightNum) || currentWeightNum <= 0 ? "0.000" : currentWeightNum.toFixed(3);
 
-                {/* Production metrics targets */}
-                <div className="mt-4 pt-3 border-t border-slate-200 grid grid-cols-2 gap-2">
-                  <div className="bg-indigo-50 border border-indigo-100/50 p-2.5 rounded-lg text-center">
-                    <span className="text-[9px] font-mono text-indigo-500 uppercase">Total Production</span>
-                    {(() => {
-                      const logged = productionLogs
-                        .filter(l => l.jobCardNo === activePlan.jobCardNo)
-                        .reduce((sum, l) => sum + l.qty, 0);
-                      return <p className="font-bold font-mono text-sm text-indigo-900 mt-0.5">{logged.toLocaleString()} Kg</p>;
-                    })()}
-                  </div>
-                  <div className="bg-emerald-50 border border-emerald-100/50 p-2.5 rounded-lg text-center">
-                    <span className="text-[9px] font-mono text-emerald-500 uppercase">Job Card Balance</span>
-                    {(() => {
-                      const logged = productionLogs
-                        .filter(l => l.jobCardNo === activePlan.jobCardNo)
-                        .reduce((sum, l) => sum + l.qty, 0);
-                      const bal = activePlan.plannedQty - logged;
-                      return <p className="font-bold font-mono text-sm text-emerald-900 mt-0.5">{bal.toLocaleString()} Kg</p>;
-                    })()}
-                  </div>
-                </div>
-              </div>
+        const handlePopupPrint = () => {
+          window.print();
+        };
 
-              {/* KG Entry Table row / selector row */}
-              <div className="border border-indigo-100 bg-indigo-50/15 p-4 rounded-xl space-y-3">
-                <div className="flex items-center justify-between border-b border-indigo-100/60 pb-2">
-                  <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider font-mono">KG Entry Table Panel</span>
-                  <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-md font-bold">Knitting Weights</span>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Knitted Fabric Weight Input (Kg) *</label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="Enter production quantity (e.g. 125.5)"
-                    required
-                    className="w-full p-3 border border-indigo-200 rounded-xl text-base font-bold text-center text-indigo-700 bg-white focus:ring-2 focus:ring-indigo-500/30 focus:outline-hidden"
-                    value={entryQty}
-                    onChange={(e) => setEntryQty(e.target.value)}
-                  />
-                </div>
-              </div>
+        return (
+          <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-xs flex items-start justify-center p-4 z-50 overflow-y-auto pt-4 md:pt-10 pb-10">
+            {/* Dynamic PRINT override stylesheet specifically for thermal sticker label printers (2.50in x 1.90in) */}
+            <style>{`
+              @media print {
+                /* Hide normal screen app layout and forms */
+                #pro_app_root, #pro_nav, header, #pro_main, .no-print, button, form, input, select, .editor-panel {
+                  display: none !important;
+                }
+                /* Show ONLY the sticker card on white background */
+                body {
+                  background: #ffffff !important;
+                  color: #000000 !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
+                .printable-sticker-modal {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  height: auto !important;
+                  background: #ffffff !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                  display: block !important;
+                  backdrop-filter: none !important;
+                  border: none !important;
+                  box-shadow: none !important;
+                }
+                .sticker-card {
+                  width: 2.5in !important;
+                  height: 1.9in !important;
+                  border: none !important;
+                  box-shadow: none !important;
+                  margin: 0 auto !important;
+                  padding: 0.05in !important;
+                  box-sizing: border-box !important;
+                  page-break-inside: avoid !important;
+                  page-break-after: always !important;
+                  background: white !important;
+                }
+                /* Ensure crisp black rendering and scaled down text */
+                .sticker-text {
+                  color: #000000 !important;
+                  font-family: "Courier New", Courier, monospace !important;
+                  font-weight: bold !important;
+                }
+              }
+            `}</style>
 
-              {/* Input Form Fields for Date & Shift */}
-              <div className="grid grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Select Shift (A, B, C)</label>
-                  <select
-                    className="w-full p-2 border border-slate-200 rounded-xl text-xs bg-white font-mono"
-                    value={selectedShift}
-                    onChange={(e) => setSelectedShift(e.target.value as any)}
-                  >
-                    <option value="A">Shift A (06:10 AM - 02:10 PM)</option>
-                    <option value="B">Shift B (02:10 PM - 10:10 PM)</option>
-                    <option value="C">Shift C (10:10 PM - 06:10 AM)</option>
-                  </select>
+            <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-5xl w-full overflow-hidden no-print">
+              <div className="bg-slate-900 text-white py-4 px-6 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Barcode className="h-5 w-5 text-indigo-400" />
+                  <h3 className="font-mono font-bold text-sm tracking-wide">Barcode Match: {activePlan.jobCardNo}</h3>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Date & Time *</label>
-                  <input
-                    type="datetime-local"
-                    className="w-full p-2 border border-slate-200 rounded-xl text-xs font-mono"
-                    value={dateTimeStr}
-                    onChange={(e) => handleDateTimeStrChange(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* POPUP BUTTONS */}
-              <div className="border-t border-slate-100 pt-4 flex gap-3 text-xs">
                 <button
                   type="button"
                   onClick={() => { setActivePlan(null); setActiveOrder(null); }}
-                  className="flex-1 border border-slate-200 text-slate-500 bg-white hover:bg-slate-50 rounded-xl py-2.5 font-semibold cursor-pointer"
+                  className="text-slate-400 hover:text-white text-xl font-bold cursor-pointer"
                 >
-                  Reject & Close
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 font-semibold cursor-pointer shadow-indigo-200 shadow-sm"
-                >
-                  Save Production
+                  &times;
                 </button>
               </div>
-            </form>
+
+              <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-150">
+                {/* Left Side: Form entry & details */}
+                <form onSubmit={handleSaveProduction} className="flex-1 p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                  {/* Ticket details summary */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-150 text-xs space-y-2.5 text-slate-650">
+                    <p className="text-[10px] font-mono text-indigo-600 font-bold uppercase tracking-wider mb-2">Validated Job Specs</p>
+                    <div className="grid grid-cols-2 gap-y-1.5 gap-x-4">
+                      <p><span className="text-slate-400">Machine Number:</span> <strong className="text-slate-800">{activePlan.machineNo}</strong></p>
+                      <p><span className="text-slate-400">Order Number:</span> <strong className="text-slate-800">{activePlan.orderNo}</strong></p>
+                      <p><span className="text-slate-400">Factory Name:</span> <strong className="text-slate-800">{activeOrder.factoryName}</strong></p>
+                      <p><span className="text-slate-400">Factory Order:</span> <strong className="text-slate-800">{activeOrder.factoryOrder}</strong></p>
+                      <p><span className="text-slate-400">Fabric Type:</span> <strong className="text-slate-800">{activeOrder.fabricType}</strong></p>
+                      <p><span className="text-slate-400">Dia x GG:</span> <strong className="text-slate-800">{activeOrder.diaGG}</strong></p>
+                      <p><span className="text-slate-400">Color Variant:</span> <strong className="text-slate-800">{activeOrder.color}</strong></p>
+                      <p><span className="text-slate-400">Finish GSM:</span> <strong className="text-slate-800">{activeOrder.finishGSM} GSM</strong></p>
+                      <p><span className="text-slate-400">Finish Dia:</span> <strong className="text-slate-800">{activeOrder.finishDia}''{activeOrder.knitType ? ` ${activeOrder.knitType}` : ""}</strong></p>
+                      <p><span className="text-slate-400">Factory Job No:</span> <strong className="text-slate-800">{activeOrder.factoryJobNo}</strong></p>
+                    </div>
+
+                    {/* Yarn segment details block */}
+                    <div className="border-t border-slate-200 mt-3 pt-3 space-y-1.5">
+                      <p className="text-[10px] font-mono text-slate-500 font-bold uppercase">Yarn Setup Specifications</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px] bg-white p-2 rounded-lg border border-slate-100">
+                        <div>
+                          <span className="text-slate-405 block uppercase">Segment 1</span>
+                          <p className="font-semibold text-slate-800">{activeOrder.yarns?.[0]?.yc || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">L: {activeOrder.yarns?.[0]?.lot || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">S: {activeOrder.yarns?.[0]?.spinner || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">SL: {activeOrder.yarns?.[0]?.sl || "-"}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-405 block uppercase">Segment 2</span>
+                          <p className="font-semibold text-slate-800">{activeOrder.yarns?.[1]?.yc || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">L: {activeOrder.yarns?.[1]?.lot || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">S: {activeOrder.yarns?.[1]?.spinner || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">SL: {activeOrder.yarns?.[1]?.sl || "-"}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-405 block uppercase">Segment 3</span>
+                          <p className="font-semibold text-slate-800">{activeOrder.yarns?.[2]?.yc || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">L: {activeOrder.yarns?.[2]?.lot || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">S: {activeOrder.yarns?.[2]?.spinner || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">SL: {activeOrder.yarns?.[2]?.sl || "-"}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-405 block uppercase">Segment 4</span>
+                          <p className="font-semibold text-slate-800">{activeOrder.yarns?.[3]?.yc || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">L: {activeOrder.yarns?.[3]?.lot || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">S: {activeOrder.yarns?.[3]?.spinner || "-"}</p>
+                          <p className="text-slate-400 font-mono text-[9px]">SL: {activeOrder.yarns?.[3]?.sl || "-"}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-1 text-[11px] text-slate-600 font-mono bg-indigo-50/40 p-2 rounded-lg border border-indigo-100/50 mt-2">
+                        <p><span className="text-slate-400 font-bold">Yarn:</span> {activeOrder.yarns?.map(y => y.yc).filter(Boolean).join("+") || "-"}</p>
+                        <p><span className="text-slate-400 font-bold">Lot:</span> {activeOrder.yarns?.map(y => y.lot).filter(Boolean).join("+") || "-"}</p>
+                        <p><span className="text-slate-400 font-bold">Spinner:</span> {activeOrder.yarns?.map(y => y.spinner).filter(Boolean).join("+") || "-"}</p>
+                        <p><span className="text-slate-400 font-bold">SL (S/L):</span> {activeOrder.yarns?.map(y => y.sl).filter(Boolean).join("+") || "-"}</p>
+                      </div>
+                    </div>
+
+                    {/* Production metrics targets */}
+                    <div className="mt-4 pt-3 border-t border-slate-200 grid grid-cols-2 gap-2">
+                      <div className="bg-indigo-50 border border-indigo-100/50 p-2.5 rounded-lg text-center">
+                        <span className="text-[9px] font-mono text-indigo-500 uppercase">Total Production</span>
+                        {(() => {
+                          const logged = productionLogs
+                            .filter(l => l.jobCardNo === activePlan.jobCardNo)
+                            .reduce((sum, l) => sum + l.qty, 0);
+                          return <p className="font-bold font-mono text-sm text-indigo-900 mt-0.5">{logged.toLocaleString()} Kg</p>;
+                        })()}
+                      </div>
+                      <div className="bg-emerald-50 border border-emerald-100/50 p-2.5 rounded-lg text-center">
+                        <span className="text-[9px] font-mono text-emerald-500 uppercase">Job Card Balance</span>
+                        {(() => {
+                          const logged = productionLogs
+                            .filter(l => l.jobCardNo === activePlan.jobCardNo)
+                            .reduce((sum, l) => sum + l.qty, 0);
+                          const bal = activePlan.plannedQty - logged;
+                          return <p className="font-bold font-mono text-sm text-emerald-900 mt-0.5">{bal.toLocaleString()} Kg</p>;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KG Entry Table row / selector row */}
+                  <div className="border border-indigo-100 bg-indigo-50/15 p-4 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between border-b border-indigo-100/60 pb-2">
+                      <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider font-mono">KG Entry Table Panel</span>
+                      <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-md font-bold">Knitting Weights</span>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Knitted Fabric Weight Input (Kg) *</label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="Enter production quantity (e.g. 125.5)"
+                        required
+                        className="w-full p-3 border border-indigo-200 rounded-xl text-base font-bold text-center text-indigo-700 bg-white focus:ring-2 focus:ring-indigo-500/30 focus:outline-hidden"
+                        value={entryQty}
+                        onChange={(e) => setEntryQty(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Input Form Fields for Date & Shift */}
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Select Shift (A, B, C)</label>
+                      <select
+                        className="w-full p-2 border border-slate-200 rounded-xl text-xs bg-white font-mono"
+                        value={selectedShift}
+                        onChange={(e) => setSelectedShift(e.target.value as any)}
+                      >
+                        <option value="A">Shift A (06:10 AM - 02:10 PM)</option>
+                        <option value="B">Shift B (02:10 PM - 10:10 PM)</option>
+                        <option value="C">Shift C (10:10 PM - 06:10 AM)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Date & Time *</label>
+                      <input
+                        type="datetime-local"
+                        className="w-full p-2 border border-slate-200 rounded-xl text-xs font-mono"
+                        value={dateTimeStr}
+                        onChange={(e) => handleDateTimeStrChange(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* POPUP BUTTONS */}
+                  <div className="border-t border-slate-100 pt-4 flex gap-3 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => { setActivePlan(null); setActiveOrder(null); }}
+                      className="flex-1 border border-slate-200 text-slate-500 bg-white hover:bg-slate-50 rounded-xl py-2.5 font-semibold cursor-pointer"
+                    >
+                      Reject & Close
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 font-semibold cursor-pointer shadow-indigo-250 shadow-md"
+                    >
+                      Save Production
+                    </button>
+                  </div>
+                </form>
+
+                {/* Right Side: Live Thermal Sticker Preview (Non-Editable) */}
+                <div className="w-full md:w-[410px] bg-slate-50 p-6 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-slate-200">
+                  <span className="text-slate-400 text-[10px] font-mono mb-3 uppercase tracking-wider font-semibold">Live Sticker Preview (2.50" x 1.90")</span>
+
+                  {/* Sticker Container */}
+                  <div className="bg-white text-black p-2 shadow-lg w-[280px] h-[213px] border border-slate-300 rounded-md flex flex-col justify-between text-left font-mono sticker-card text-[9px] leading-tight select-none">
+                    
+                    {/* Row 1: Factory Job No + Knit Type */}
+                    <div className="text-[10px] font-black tracking-tight leading-none uppercase flex justify-between border-b border-black/10 pb-0.5 sticker-text">
+                      <span className="truncate max-w-[130px]">{factoryJobNo}</span>
+                      <span className="text-[9px] truncate max-w-[110px]">{knitType}</span>
+                    </div>
+
+                    {/* Row 2: Barcode */}
+                    <div className="w-full text-center">
+                      <BarcodeImage value={nextRollNo} />
+                    </div>
+
+                    {/* Row 3: Barcode value + Contract / Order Reference */}
+                    <div className="text-[9px] font-bold tracking-tighter leading-none uppercase flex justify-between sticker-text">
+                      <span className="truncate max-w-[140px]">{nextRollNo}</span>
+                      <span className="truncate max-w-[100px]">{factoryOrder}</span>
+                    </div>
+
+                    {/* Row 4: Weight, Fabric Type, Stitch Length */}
+                    <div className="text-[9px] font-bold leading-none uppercase flex justify-between border-t border-dashed border-black/20 pt-0.5 sticker-text">
+                      <span>W:{liveWeightStr} Kg</span>
+                      <span className="max-w-[110px] truncate text-center">{fabricType}</span>
+                      <span>S/L:{stitchLength}</span>
+                    </div>
+
+                    {/* Row 5: Factory Order Ref, Factory Name */}
+                    <div className="text-[9px] font-bold leading-none uppercase flex justify-between sticker-text">
+                      <span>{factoryOrder}</span>
+                      <span className="max-w-[120px] truncate text-right">{factoryName}</span>
+                    </div>
+
+                    {/* Row 6: Color, GSM, Machine Brand */}
+                    <div className="text-[9px] font-bold leading-none uppercase flex justify-between sticker-text">
+                      <span>{color}</span>
+                      <span>{finishGSM} GSM</span>
+                      <span>Norsel</span>
+                    </div>
+
+                    {/* Row 7: Operator & Machine No, Shift, Date Time */}
+                    <div className="text-[8px] font-bold leading-none uppercase flex justify-between sticker-text border-t border-dotted border-black/20 pt-0.5">
+                      <span>{operatorText}</span>
+                      <span>SHIFT {selectedShift}</span>
+                      <span className="text-[7.5px]">{dateTimeStr.replace("T", " ")}</span>
+                    </div>
+
+                    {/* Row 8: Finish Dia, Yarn Count, Spinner, Lot */}
+                    <div className="text-[8px] font-bold leading-none uppercase flex justify-between bg-black/5 p-0.5 rounded sticker-text">
+                      <span>D:{finishDia}</span>
+                      <span className="max-w-[80px] truncate">{yarnCount}</span>
+                      <span className="max-w-[50px] truncate">{yarnSpinner}</span>
+                      <span>L:{yarnLot}</span>
+                    </div>
+
+                  </div>
+
+                  {/* Print trigger in Preview */}
+                  <button
+                    type="button"
+                    onClick={handlePopupPrint}
+                    className="w-full max-w-[280px] bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-700/10 mt-5"
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>Print Sticker Only</span>
+                  </button>
+                  <p className="text-[10px] text-slate-400 mt-2 text-center max-w-[280px]">
+                    Sticker matches the official format exactly and is not editable to prevent manual mistakes.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        );
+      })()}
+
+      {stickerLog && (
+        <ProductionSticker 
+          log={stickerLog} 
+          onClose={() => setStickerLog(null)} 
+        />
       )}
     </div>
   );

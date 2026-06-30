@@ -6,11 +6,11 @@ import firebaseConfig from "../../firebase-applet-config.json";
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Use standard Firestore initialization which automatically leverages WebSockets
-// and enables instant, robust automatic recovery/reconnection after prolonged device sleep/inactivity.
+// Use standard Firestore initialization with experimentalForceLongPolling enabled
+// which ensures robust connection recovery in sandboxed, iframe, and reverse-proxy environments.
 export const db = firebaseConfig.firestoreDatabaseId
-  ? initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId)
-  : getFirestore(app);
+  ? initializeFirestore(app, { experimentalForceLongPolling: true }, firebaseConfig.firestoreDatabaseId)
+  : initializeFirestore(app, { experimentalForceLongPolling: true });
 
 const provider = new GoogleAuthProvider();
 // Google Sheets API full write scope
