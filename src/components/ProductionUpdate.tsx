@@ -89,6 +89,27 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
     return localISOTime;
   });
 
+  // Sticker layout dimensions (synchronized with Reprint settings via localStorage)
+  const [stickerWidth, setStickerWidth] = useState<number>(() => {
+    const saved = localStorage.getItem("sticker_width");
+    return saved ? parseFloat(saved) : 2.50;
+  });
+  const [stickerHeight, setStickerHeight] = useState<number>(() => {
+    const saved = localStorage.getItem("sticker_height");
+    return saved ? parseFloat(saved) : 1.90;
+  });
+  const [stickerFontScale, setStickerFontScale] = useState<number>(() => {
+    const saved = localStorage.getItem("sticker_font_scale");
+    return saved ? parseFloat(saved) : 1.0;
+  });
+
+  // Sync to localStorage
+  useEffect(() => {
+    localStorage.setItem("sticker_width", stickerWidth.toString());
+    localStorage.setItem("sticker_height", stickerHeight.toString());
+    localStorage.setItem("sticker_font_scale", stickerFontScale.toString());
+  }, [stickerWidth, stickerHeight, stickerFontScale]);
+
   // Calculate Roll Number helper:
   // Count Job Card Number if it's entered 1st Time it will show “Job Card Number_01”, 2nd Time “Job Card Number_02”, etc.
   const getRollNumber = (logID: string, jobCardNo: string) => {
@@ -557,11 +578,11 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
 
         return (
           <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-xs flex items-start justify-center p-4 z-50 overflow-y-auto pt-4 md:pt-10 pb-10">
-            {/* Dynamic PRINT override stylesheet specifically for thermal sticker label printers (2.50in x 1.90in) */}
+            {/* Dynamic PRINT override stylesheet tailored for the user's custom thermal sticker label size */}
             <style>{`
               @media print {
                 /* Hide normal screen app layout and forms */
-                #pro_app_root, #pro_nav, header, #pro_main, .no-print, button, form, input, select, .editor-panel {
+                #pro_app_root, #pro_nav, header, #pro_main, .no-print, button, form, input, select, .editor-panel, .settings-panel {
                   display: none !important;
                 }
                 /* Show ONLY the sticker card on white background */
@@ -586,8 +607,8 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                   box-shadow: none !important;
                 }
                 .sticker-card {
-                  width: 2.5in !important;
-                  height: 1.9in !important;
+                  width: ${stickerWidth}in !important;
+                  height: ${stickerHeight}in !important;
                   border: none !important;
                   box-shadow: none !important;
                   margin: 0 auto !important;
@@ -596,6 +617,8 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                   page-break-inside: avoid !important;
                   page-break-after: always !important;
                   background: white !important;
+                  font-size: ${9 * stickerFontScale}px !important;
+                  line-height: 1.1 !important;
                 }
                 /* Ensure crisp black rendering and scaled down text */
                 .sticker-text {
@@ -770,16 +793,19 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                 </form>
 
                 {/* Right Side: Live Thermal Sticker Preview (Non-Editable) */}
-                <div className="w-full md:w-[410px] bg-slate-50 p-6 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-slate-200">
-                  <span className="text-slate-400 text-[10px] font-mono mb-3 uppercase tracking-wider font-semibold">Live Sticker Preview (2.50" x 1.90")</span>
+                <div className="w-full md:w-[410px] bg-slate-50 p-6 flex flex-col items-center border-t md:border-t-0 md:border-l border-slate-200 overflow-y-auto max-h-[75vh]">
+                  <span className="text-slate-400 text-[10px] font-mono mb-3 uppercase tracking-wider font-semibold">Live Sticker Preview ({stickerWidth.toFixed(2)}" x {stickerHeight.toFixed(2)}")</span>
 
                   {/* Sticker Container */}
-                  <div className="bg-white text-black p-2 shadow-lg w-[280px] h-[213px] border border-slate-300 rounded-md flex flex-col justify-between text-left font-mono sticker-card text-[9px] leading-tight select-none">
+                  <div 
+                    style={{ fontSize: `${9 * stickerFontScale}px` }}
+                    className="bg-white text-black p-2 shadow-lg w-[280px] h-[213px] border border-slate-300 rounded-md flex flex-col justify-between text-left font-mono sticker-card leading-tight select-none mb-4"
+                  >
                     
                     {/* Row 1: Factory Job No + Knit Type */}
-                    <div className="text-[10px] font-black tracking-tight leading-none uppercase flex justify-between border-b border-black/10 pb-0.5 sticker-text">
+                    <div className="font-black tracking-tight leading-none uppercase flex justify-between border-b border-black/10 pb-0.5 sticker-text" style={{ fontSize: `${10 * stickerFontScale}px` }}>
                       <span className="truncate max-w-[130px]">{factoryJobNo}</span>
-                      <span className="text-[9px] truncate max-w-[110px]">{knitType}</span>
+                      <span className="truncate max-w-[110px]" style={{ fontSize: `${9 * stickerFontScale}px` }}>{knitType}</span>
                     </div>
 
                     {/* Row 2: Barcode */}
@@ -788,40 +814,40 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
                     </div>
 
                     {/* Row 3: Barcode value + Contract / Order Reference */}
-                    <div className="text-[9px] font-bold tracking-tighter leading-none uppercase flex justify-between sticker-text">
+                    <div className="font-bold tracking-tighter leading-none uppercase flex justify-between sticker-text" style={{ fontSize: `${9 * stickerFontScale}px` }}>
                       <span className="truncate max-w-[140px]">{nextRollNo}</span>
                       <span className="truncate max-w-[100px]">{factoryOrder}</span>
                     </div>
 
                     {/* Row 4: Weight, Fabric Type, Stitch Length */}
-                    <div className="text-[9px] font-bold leading-none uppercase flex justify-between border-t border-dashed border-black/20 pt-0.5 sticker-text">
+                    <div className="font-bold leading-none uppercase flex justify-between border-t border-dashed border-black/20 pt-0.5 sticker-text" style={{ fontSize: `${9 * stickerFontScale}px` }}>
                       <span>W:{liveWeightStr} Kg</span>
                       <span className="max-w-[110px] truncate text-center">{fabricType}</span>
                       <span>S/L:{stitchLength}</span>
                     </div>
 
                     {/* Row 5: Factory Order Ref, Factory Name */}
-                    <div className="text-[9px] font-bold leading-none uppercase flex justify-between sticker-text">
+                    <div className="font-bold leading-none uppercase flex justify-between sticker-text" style={{ fontSize: `${9 * stickerFontScale}px` }}>
                       <span>{factoryOrder}</span>
                       <span className="max-w-[120px] truncate text-right">{factoryName}</span>
                     </div>
 
                     {/* Row 6: Color, GSM, Machine Brand */}
-                    <div className="text-[9px] font-bold leading-none uppercase flex justify-between sticker-text">
+                    <div className="font-bold leading-none uppercase flex justify-between sticker-text" style={{ fontSize: `${9 * stickerFontScale}px` }}>
                       <span>{color}</span>
                       <span>{finishGSM} GSM</span>
                       <span>Norsel</span>
                     </div>
 
                     {/* Row 7: Operator & Machine No, Shift, Date Time */}
-                    <div className="text-[8px] font-bold leading-none uppercase flex justify-between sticker-text border-t border-dotted border-black/20 pt-0.5">
+                    <div className="font-bold leading-none uppercase flex justify-between sticker-text border-t border-dotted border-black/20 pt-0.5" style={{ fontSize: `${8 * stickerFontScale}px` }}>
                       <span>{operatorText}</span>
                       <span>SHIFT {selectedShift}</span>
-                      <span className="text-[7.5px]">{dateTimeStr.replace("T", " ")}</span>
+                      <span style={{ fontSize: `${7.5 * stickerFontScale}px` }}>{dateTimeStr.replace("T", " ")}</span>
                     </div>
 
                     {/* Row 8: Finish Dia, Yarn Count, Spinner, Lot */}
-                    <div className="text-[8px] font-bold leading-none uppercase flex justify-between bg-black/5 p-0.5 rounded sticker-text">
+                    <div className="font-bold leading-none uppercase flex justify-between bg-black/5 p-0.5 rounded sticker-text" style={{ fontSize: `${8 * stickerFontScale}px` }}>
                       <span>D:{finishDia}</span>
                       <span className="max-w-[80px] truncate">{yarnCount}</span>
                       <span className="max-w-[50px] truncate">{yarnSpinner}</span>
@@ -830,17 +856,99 @@ export default function ProductionUpdate({ readOnly = false }: ProductionUpdateP
 
                   </div>
 
+                  {/* Dimension Tuning Controls directly inside the preview area */}
+                  <div className="w-full max-w-[280px] bg-white border border-slate-200 rounded-xl p-3 mb-4 space-y-3 shadow-xs">
+                    <span className="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-wider block">Manual Dimension Adjuster</span>
+                    
+                    {/* Presets */}
+                    <div className="grid grid-cols-3 gap-1.5 pb-1">
+                      <button
+                        type="button"
+                        onClick={() => { setStickerWidth(2.50); setStickerHeight(1.90); }}
+                        className={`py-1 px-1 rounded-md text-[9px] font-bold border transition-all cursor-pointer text-center ${
+                          stickerWidth === 2.50 && stickerHeight === 1.90
+                            ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        2.50" x 1.90"
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setStickerWidth(3.00); setStickerHeight(2.00); }}
+                        className={`py-1 px-1 rounded-md text-[9px] font-bold border transition-all cursor-pointer text-center ${
+                          stickerWidth === 3.00 && stickerHeight === 2.00
+                            ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        3.00" x 2.00"
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setStickerWidth(4.00); setStickerHeight(3.00); }}
+                        className={`py-1 px-1 rounded-md text-[9px] font-bold border transition-all cursor-pointer text-center ${
+                          stickerWidth === 4.00 && stickerHeight === 3.00
+                            ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        4.00" x 3.00"
+                      </button>
+                    </div>
+
+                    {/* Custom Width, Height, Font Scale inputs */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-450 uppercase mb-0.5">W (in)</label>
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="1.0"
+                          max="6.0"
+                          value={stickerWidth}
+                          onChange={(e) => setStickerWidth(parseFloat(e.target.value) || 2.50)}
+                          className="w-full p-1 border border-slate-200 rounded text-[10px] text-center font-bold text-slate-700 bg-slate-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-450 uppercase mb-0.5">H (in)</label>
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="1.0"
+                          max="6.0"
+                          value={stickerHeight}
+                          onChange={(e) => setStickerHeight(parseFloat(e.target.value) || 1.90)}
+                          className="w-full p-1 border border-slate-200 rounded text-[10px] text-center font-bold text-slate-700 bg-slate-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-450 uppercase mb-0.5">Font Scale</label>
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="0.5"
+                          max="2.0"
+                          value={stickerFontScale}
+                          onChange={(e) => setStickerFontScale(parseFloat(e.target.value) || 1.0)}
+                          className="w-full p-1 border border-slate-200 rounded text-[10px] text-center font-bold text-slate-700 bg-slate-50"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Print trigger in Preview */}
                   <button
                     type="button"
                     onClick={handlePopupPrint}
-                    className="w-full max-w-[280px] bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-700/10 mt-5"
+                    className="w-full max-w-[280px] bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-700/10"
                   >
                     <Printer className="h-4 w-4" />
                     <span>Print Sticker Only</span>
                   </button>
                   <p className="text-[10px] text-slate-400 mt-2 text-center max-w-[280px]">
-                    Sticker matches the official format exactly and is not editable to prevent manual mistakes.
+                    Tip: In Chrome's print popup, set margins to <strong>None</strong> and uncheck <strong>Headers and Footers</strong> for a perfect 2.50" x 1.90" fit!
                   </p>
                 </div>
               </div>
